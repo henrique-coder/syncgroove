@@ -1,94 +1,67 @@
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #fff;
-    color: #333;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
     margin: 0;
-    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+    background-color: #ffffff;
+    color: #000000;
 }
 
 .header {
-    width: 100%;
-    text-align: center;
-    padding: 20px 0;
     background-color: #7289da;
-    color: #fff;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
+    padding: 15px;
+    text-align: center;
 }
 
 .container {
-    width: 80%;
-    max-width: 400px;
-    text-align: left;
-    margin: auto;
-    border-radius: 10px;
-    overflow: hidden;
-    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
 }
 
 .input-container {
     margin-bottom: 10px;
-    text-align: center;
 }
 
-.input-container input,
-.input-container button {
-    margin-bottom: 10px;
+input, button {
+    margin: 5px;
     padding: 10px;
-    font-size: 16px;
-    border-radius: 5px;
-}
-
-.input-container button {
-    background-color: #7289da;
-    color: #fff;
     border: none;
-    cursor: pointer;
-    transition: background-color 0.3s;
     border-radius: 5px;
 }
 
-.input-container button:hover {
-    background-color: #677bc4;
+button {
+    background-color: #7289da;
+    color: #ffffff;
+    cursor: pointer;
 }
 
 .result-container {
-    white-space: pre-wrap;
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 10px;
-    border-radius: 5px;
+    width: 90%;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
 }
 
 .category {
-    font-size: 18px;
-    font-weight: bold;
-    margin-top: 15px;
+    background-color: #99aab5;
+    padding: 5px;
     cursor: pointer;
-    background-color: #7289da;
-    color: #fff;
-    padding: 5px 10px;
-    border-bottom: 1px solid #fff;
+    margin-top: 5px;
+    border-radius: 5px;
 }
 
 .section {
-    list-style-type: none;
-    padding: 0;
-    background-color: #f2f2f2;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-    display: none;
-}
-
-.section li {
     margin-top: 5px;
 }
 
-.collapsed {
-    display: none;
+a {
+    color: #7289da;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+a:hover {
+    text-decoration: underline;
 }
