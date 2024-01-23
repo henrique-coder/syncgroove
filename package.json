@@ -10,7 +10,7 @@
   "author": "Henrique-Coder",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.6.5",
-    "electron": "^28.1.4"
+    "electron": "^28.1.4",
+    "axios": "^1.6.5"
   }
 }
