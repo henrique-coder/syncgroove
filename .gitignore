@@ -1,8 +1,10 @@
 # IDE
+.idea
 .vscode
 
 # Directories
 node_modules
+dist
 
 # Files
 # ...
