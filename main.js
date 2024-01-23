@@ -1,8 +1,5 @@
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
 const axios = require('axios');
-const path = require('path');
-const { format } = require('url');
-const reload = require('electron-reload');
 
 let mainWindow;
 
@@ -20,13 +17,7 @@ function createWindow() {
     mainWindow.removeMenu();
 }
 
-app.whenReady().then(() => {
-    createWindow();
-    reload(__dirname, {
-        electron: path.join(__dirname, 'node_modules', '.bin', 'electron'),
-        awaitWriteFinish: true,
-    });
-});
+app.whenReady().then(createWindow);
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
