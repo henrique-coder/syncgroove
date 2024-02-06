@@ -4,7 +4,7 @@
 
 # Directories
 node_modules
-dist
+compiled
 
 # Files
 # ...
