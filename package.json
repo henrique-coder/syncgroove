@@ -1,6 +1,6 @@
 {
   "name": "syncgroove",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Seamlessly sync videos and music, providing an engaging and efficient musical experience in one user-friendly app.",
   "main": "src/main.js",
   "scripts": {
@@ -23,7 +23,7 @@
   },
   "build": {
     "appId": "com.syncgroove.app",
-    "productName": "SyncGroove",
+    "productName": "syncgroove-v0.0.2-win32-x64",
     "directories": {
       "output": "compiled"
     },
