@@ -1,10 +1,13 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const {
+    app,
+    BrowserWindow,
+    ipcMain,
+    shell
+} = require('electron');
 const axios = require('axios');
 
-let mainWindow;
-
 function createWindow() {
-    mainWindow = new BrowserWindow({
+    const mainWindow = new BrowserWindow({
         width: 700,
         height: 600,
         webPreferences: {
@@ -40,17 +43,22 @@ function extractVideoId(url) {
 ipcMain.on('getVideoInfo', async (event, url) => {
     const videoId = extractVideoId(url);
 
-    if (videoId) {
-        try {
-            const response = await axios.get(`http://node1.mindwired.com.br:8452/api/wrapper/v1/youtube-video?id=${videoId}`);
-            event.reply('videoInfo', response.data);
-        } catch (error) {
-            console.error(`Error fetching video information: ${error.message}`);
-            event.reply('videoInfo', { error: `Error fetching video information: ${error.message}` });
-        }
-    } else {
+    if (!videoId) {
         console.error('Invalid video URL');
-        event.reply('videoInfo', { error: 'Invalid video URL' });
+        event.reply('videoInfo', {
+            error: 'Invalid video URL'
+        });
+        return;
+    }
+
+    try {
+        const response = await axios.get(`http://node1.mindwired.com.br:8452/api/scraper/v1/video-youtube.com?id=${videoId}`);
+        event.reply('videoInfo', response.data);
+    } catch (error) {
+        console.error(`Error fetching video information: ${error.message}`);
+        event.reply('videoInfo', {
+            error: `Error fetching video information: ${error.message}`
+        });
     }
 });
 
