@@ -1,47 +1,70 @@
-const { ipcRenderer, shell } = require('electron');
+const {
+    ipcRenderer,
+    shell
+} = require('electron');
 
 document.addEventListener('DOMContentLoaded', () => {
     toggleSection('GeneralInformation');
 });
 
+const loader = document.createElement('div');
+loader.classList.add('loader');
+
 function getVideoInfo() {
     const urlInput = document.getElementById('urlInput').value;
+    const resultContainer = document.getElementById('result');
+    resultContainer.innerHTML = '';
+    resultContainer.appendChild(loader);
     ipcRenderer.send('getVideoInfo', urlInput);
 }
 
 ipcRenderer.on('videoInfo', (event, result) => {
-    document.getElementById('result').innerHTML = formatResult(result);
+    const resultContainer = document.getElementById('result');
+    resultContainer.innerHTML = formatResult(result.response.info, result.response.media);
 });
 
 ipcRenderer.on('openExternalLink', (event, link) => {
     shell.openExternal(link);
 });
 
-function formatResult(result) {
-    if (result.error) {
-        return `<p>Error: ${result.error}</p>`;
-    }
-
+function formatResult(info, media) {
     let formattedResult = '<div class="category" onclick="toggleSection(\'GeneralInformation\')">General Information</div>';
     formattedResult += '<ul id="GeneralInformation" class="section">';
-    
-    const generalInfoKeys = ['URL', 'ID', 'Title', 'Channel', 'Duration', 'Views count', 'Likes count', 'Comments count', 'Tags', 'Categories', 'Age restricted', 'Upload date'];
 
-    for (const key of generalInfoKeys) {
-        if (result.output.data.info[key.toLowerCase()] !== undefined) {
-            const niceKey = key.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-            const value = key === 'Duration' ? formatDuration(result.output.data.info[key.toLowerCase()]) : result.output.data.info[key.toLowerCase()] || 'None';
-            formattedResult += `<li><strong>${niceKey}:</strong> ${value}</li>`;
-        }
+    const generalInfoKeys = {
+        'URL': info.short_url,
+        'ID': info.id,
+        'Title': info.title,
+        'Channel': info.channel_name,
+        'Duration': formatDuration(info.duration),
+        'Views count': info.views,
+        'Likes count': info.likes,
+        'Comments count': info.comments,
+        'Tags': info.tags.join(', '),
+        'Categories': info.categories.join(', '),
+        'Age restricted': info.is_age_restricted ? 'Yes' : 'No',
+        'Upload date': new Date(info.upload_date * 1000).toLocaleDateString()
+    };
+
+    for (const [key, value] of Object.entries(generalInfoKeys)) {
+        formattedResult += `<li><strong>${key}:</strong> ${value || 'None'}</li>`;
     }
 
     formattedResult += '</ul>';
 
-    if (result.output.data.media.video && result.output.data.media.video.length > 0) {
+    if (media.video && media.video.length > 0) {
+        const sortedVideoUrls = media.video.sort((a, b) => {
+            if (a.quality !== b.quality) {
+                return compareQualities(a.quality, b.quality);
+            } else {
+                return b.bitrate - a.bitrate;
+            }
+        });
+
         formattedResult += '<div class="category" onclick="toggleSection(\'VideoDirectURLs\')">Video Direct URLs</div>';
         formattedResult += '<ul id="VideoDirectURLs" class="section" style="display:none;">';
 
-        result.output.data.media.video.sort((a, b) => compareQualities(a.quality, b.quality)).reverse().forEach((video) => {
+        sortedVideoUrls.forEach((video) => {
             const videoInfo = `${video.quality} - ${video.bitrate} kbps - ${video.codec} - ${formatBytes(video.size)}`;
             formattedResult += `<li><a href="#" onclick="openLink('${video.url}')">${videoInfo}</a></li>`;
         });
@@ -49,25 +72,13 @@ function formatResult(result) {
         formattedResult += '</ul>';
     }
 
-    if (result.output.data.media.audio && result.output.data.media.audio.length > 0) {
+    if (media.audio && media.audio.length > 0) {
         formattedResult += '<div class="category" onclick="toggleSection(\'AudioDirectURLs\')">Audio Direct URLs</div>';
         formattedResult += '<ul id="AudioDirectURLs" class="section" style="display:none;">';
 
-        result.output.data.media.audio.sort((a, b) => b.bitrate - a.bitrate).forEach((audio) => {
+        media.audio.sort((a, b) => b.bitrate - a.bitrate).forEach((audio) => {
             const audioInfo = `${audio.bitrate} kbps - ${audio.codec} - ${formatBytes(audio.size)}`;
             formattedResult += `<li><a href="#" onclick="openLink('${audio.url}')">${audioInfo}</a></li>`;
-        });
-
-        formattedResult += '</ul>';
-    }
-
-    if (result.output.data.media.subtitles && result.output.data.media.subtitles.length > 0) {
-        formattedResult += '<div class="category" onclick="toggleSection(\'SubtitleDirectURLs\')">Subtitle Direct URLs</div>';
-        formattedResult += '<ul id="SubtitleDirectURLs" class="section" style="display:none;">';
-
-        result.output.data.media.subtitles.sort((a, b) => a.lang.localeCompare(b.lang)).forEach((subtitle) => {
-            const subtitleInfo = `${subtitle.lang} - ${subtitle.ext}`;
-            formattedResult += `<li><a href="#" onclick="openLink('${subtitle.url}')">${subtitleInfo}</a></li>`;
         });
 
         formattedResult += '</ul>';
@@ -77,14 +88,14 @@ function formatResult(result) {
 }
 
 function formatBytes(bytes) {
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     if (bytes === 0) return '0 Byte';
     const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
     return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
 }
 
 function compareQualities(qualityA, qualityB) {
-    const order = ['4320p', '2160p', '1440p', '1080p', '720p', '480p', '360p', '240p', '144p'];
+    const order = ['144p', '240p', '360p', '480p', '720p', '1080p', '1440p', '2160p', '4320p'];
     return order.indexOf(qualityB) - order.indexOf(qualityA);
 }
 
