@@ -29,6 +29,3 @@ jobs:
 
           args: |
             --win --x64
-            --win --ia32
-            --linux
-            --mac
