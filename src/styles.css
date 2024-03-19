@@ -1,12 +1,23 @@
+body,
+button,
+input {
+    color: var(--text-color);
+}
+
+:root {
+    --background-color: #1e1e1e;
+    --text-color: #ffffff;
+    --button-background-color: #7289da;
+    --loader-color: #ffffff;
+}
+
 body {
     margin: 0;
-    font-family: 'Arial', sans-serif;
-    background-color: #ffffff;
-    color: #000000;
+    font-family: Arial, sans-serif;
+    background-color: var(--background-color);
 }
 
 .header {
-    background-color: #7289da;
     padding: 15px;
     text-align: center;
 }
@@ -18,21 +29,28 @@ body {
     margin-top: 10px;
 }
 
+.category,
+.section {
+    margin-top: 5px;
+}
+
 .input-container {
     margin-bottom: 10px;
 }
 
-input, button {
+button,
+input {
     margin: 5px;
     padding: 10px;
     border: none;
     border-radius: 5px;
+    background-color: var(--button-background-color);
+    cursor: pointer;
+    transition: background-color 0.3s;
 }
 
-button {
-    background-color: #7289da;
-    color: #ffffff;
-    cursor: pointer;
+button:hover {
+    background-color: #5e6b84;
 }
 
 .result-container {
@@ -47,21 +65,35 @@ ul {
 .category {
     background-color: #99aab5;
     padding: 5px;
-    cursor: pointer;
-    margin-top: 5px;
     border-radius: 5px;
-}
-
-.section {
-    margin-top: 5px;
+    cursor: pointer;
 }
 
 a {
     color: #7289da;
     text-decoration: none;
-    cursor: pointer;
 }
 
 a:hover {
     text-decoration: underline;
+}
+
+.loader {
+    border: 6px solid rgba(255, 255, 255, 0.3);
+    border-top: 6px solid var(--loader-color);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: 1s linear infinite spin;
+    margin: 20px auto auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
