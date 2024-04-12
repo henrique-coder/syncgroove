@@ -1,0 +1,50 @@
+{
+  "name": "syncgroove",
+  "version": "0.0.2",
+  "description": "Seamlessly sync videos and music, providing an engaging and efficient musical experience in one user-friendly app.",
+  "main": "src/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "compile-win64": "electron-builder --win --x64",
+    "compile-win32": "electron-builder --win --ia32"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Henrique-Coder",
+    "email": "o5a3s85oc@mozmail.com"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "axios": "latest"
+  },
+  "devDependencies": {
+    "electron": "latest",
+    "electron-builder": "latest"
+  },
+  "build": {
+    "appId": "com.syncgroove.app",
+    "productName": "syncgroove-v0.0.2-win32-x64",
+    "directories": {
+      "output": ".compiled"
+    },
+    "compression": "maximum",
+    "nsis": {
+      "shortcutName": "SyncGroove",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "oneClick": false,
+      "perMachine": false
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.ico",
+      "compression": "maximum",
+      "publish": ["github"]
+    }
+  }
+}
