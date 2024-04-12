@@ -2,8 +2,8 @@
 .idea
 
 # Directories
+.debug
 node_modules
-.compiled
 
 # Files
 # ...
