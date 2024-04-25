@@ -1,10 +1,6 @@
-const {
-    app,
-    BrowserWindow,
-    ipcMain,
-    shell
-} = require('electron');
+const {app, BrowserWindow, ipcMain, shell} = require('electron');
 const axios = require('axios');
+
 
 function createWindow() {
     const mainWindow = new BrowserWindow({
@@ -52,7 +48,7 @@ ipcMain.on('getVideoInfo', async (event, url) => {
     }
 
     try {
-        const response = await axios.get(`https://everytoolsapi-henrique-coder.koyeb.app/api/scraper/v1/video-youtube.com?id=${videoId}`);
+        const response = await axios.get(`https://everytoolsapi-henrique-coder.koyeb.app/api/scraper/v1/media-youtube.com?id=${videoId}`);
         event.reply('videoInfo', response.data);
     } catch (error) {
         console.error(`Error fetching video information: ${error.message}`);

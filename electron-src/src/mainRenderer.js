@@ -37,13 +37,13 @@ function formatResult(info, media) {
         'Title': info.title,
         'Channel': info.channel_name,
         'Duration': formatDuration(info.duration),
-        'Views count': info.views,
-        'Likes count': info.likes,
-        'Comments count': info.comments,
+        'Views count': info.view_count,
+        'Likes count': info.like_count,
+        'Comments count': info.comment_count,
         'Tags': info.tags.join(', '),
         'Categories': info.categories.join(', '),
         'Age restricted': info.is_age_restricted ? 'Yes' : 'No',
-        'Upload date': new Date(info.upload_date * 1000).toLocaleDateString()
+        'Upload date': new Date(info.uploaded_at * 1000).toLocaleDateString()
     };
 
     for (const [key, value] of Object.entries(generalInfoKeys)) {

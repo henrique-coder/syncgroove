@@ -1,10 +1,10 @@
 {
   "name": "syncgroove",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Seamlessly sync videos and music, providing an engaging and efficient musical experience in one user-friendly app.",
   "main": "src/main.js",
   "scripts": {
-    "dev-app": "electron .",
+    "app": "electron .",
     "compile-win64": "electron-builder --win --x64",
     "compile-win32": "electron-builder --win --ia32"
   },
