@@ -48,7 +48,7 @@ ipcMain.on('getVideoInfo', async (event, url) => {
     }
 
     try {
-        const response = await axios.get(`https://everytoolsapi-henrique-coder.koyeb.app/api/scraper/v1/media-youtube.com?id=${videoId}`);
+        const response = await axios.get(`https://everytoolsapi-henrique-coder.koyeb.app/api/v2/scraper/youtube-media/?query=https://youtu.be/${videoId}`);
         event.reply('videoInfo', response.data);
     } catch (error) {
         console.error(`Error fetching video information: ${error.message}`);
