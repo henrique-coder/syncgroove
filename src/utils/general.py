@@ -4,6 +4,7 @@ from os import PathLike
 from pathlib import Path
 from shutil import rmtree, move
 from subprocess import run, SubprocessError
+from tkinter import Tk, filedialog as tk_filedialog
 from typing import *
 
 # Third-party imports
@@ -77,7 +78,7 @@ def make_dirs(base_path: Union[AnyStr, Path, PathLike], path_list: List[Union[An
 
     try:
         if path_list is None:
-            Path(base_path).mkdir(parents=True, exist_ok=True)
+            Path(base_path).mkdir(exist_ok=True)
         else:
             for directory in path_list:
                 Path(base_path, directory).mkdir(parents=True, exist_ok=True)
@@ -106,7 +107,7 @@ def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike], os_name: str
 
         github_repository = f'https://github.com/{gh_repo_owner}/{gh_repo_name}'
         build_name = f'ffmpeg-{response_data['tag_name']}-essentials_build'
-        temporary_ffmpeg_path = Path(MainConfig.temporary_path + '/.downloaded_ffmpeg')
+        temporary_ffmpeg_path = Path(MainConfig.temporary_app_path + '.downloaded_ffmpeg')
 
         try:
             with RemoteZip(f'{github_repository}/releases/latest/download/{build_name}.zip') as r_zip:
@@ -117,3 +118,24 @@ def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike], os_name: str
             raise Exception('Failed to download the latest FFmpeg build.')
     else:
         raise Exception('FFmpeg download is only supported on Windows. (for now)')
+
+def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: Union[AnyStr, Path, PathLike] = None) -> Optional[str]:
+    """
+    Open a Windows file dialog to select a file.
+    :param title: The title of the file dialog.
+    :param allowed_filetypes: The allowed filetypes to select.
+    :param icon_filepath: The path to the icon file.
+    :return: The selected file path or None if no file was selected.
+    """
+
+    tk = Tk()
+    tk.withdraw()
+    tk.attributes('-topmost', True)
+    tk.iconbitmap(Path(icon_filepath).resolve().as_posix()) if icon_filepath else None
+    tk.update()
+
+    input_filepath = tk_filedialog.askopenfilename(title=title, filetypes=allowed_filetypes)
+
+    tk.destroy()
+
+    return Path(input_filepath).resolve().as_posix() if input_filepath else None
