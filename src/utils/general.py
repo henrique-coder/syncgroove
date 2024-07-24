@@ -45,17 +45,17 @@ class CustomBracket(ColoredTerminalText):
     Custom terminal brackets
     """
 
-    def __init__(self, text: str, color: ColoredTerminalText, jump_lines: int = 0) -> None:
+    def __init__(self, text: str, color: ColoredTerminalText, skip_lines: int = 0) -> None:
         """
         Initialize the CustomBracket class.
         :param text: The text to display inside the brackets.
         :param color: The color of the text.
-        :param jump_lines: The number of lines to jump before displaying the brackets.
+        :param skip_lines: The number of lines to jump before displaying the brackets.
         """
 
         self.color = color
         self.text = text
-        self.jump_lines = jump_lines
+        self.skip_lines = skip_lines
 
     def __str__(self) -> str:
         """
@@ -63,7 +63,7 @@ class CustomBracket(ColoredTerminalText):
         :return: The string representation of the CustomBracket class.
         """
 
-        return '\n' * self.jump_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
+        return '\n' * self.skip_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
 
 def init_colorama(autoreset: bool = False) -> None:
     """
