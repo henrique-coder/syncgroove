@@ -48,6 +48,7 @@ def main() -> None:
     # Create the required directories
     make_dirs(Config.temporary_path)
     make_dirs(Config.main_path)
+    make_dirs(Config.main_utils_path)
     make_dirs(Config.media_path)
     make_dirs(Config.tools_path)
 
