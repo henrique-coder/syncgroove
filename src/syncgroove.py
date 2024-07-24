@@ -1,5 +1,6 @@
 # Built-in imports
 from pathlib import Path
+from time import sleep
 from typing import *
 
 # Local imports
@@ -83,6 +84,8 @@ def main() -> None:
 
     user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
 
+    query_list = list()
+
     # Load queries from a file
     if not user_input:
         clear_terminal(1)
@@ -95,12 +98,27 @@ def main() -> None:
             print(f'{Bracket('error', Color.red, 1)} {Color.red}No file selected, exiting...')
             exit(1)
 
-        query_list = extract_lines_from_file(queries_filepath)
+        extracted_queries = extract_lines_from_file(queries_filepath)
 
-        if not query_list:
+        if not extracted_queries:
             clear_terminal(1)
             print(f'{Bracket('error', Color.red, 1)} {Color.red}The file is empty or cannot be read, exiting...')
             exit(1)
+
+        query_list.extend(extracted_queries)
+
+    # Write queries manually
+    else:
+        query_list.append(user_input)
+
+        while True:
+            query = input(f'{Color.light_white} ›{Color.blue} ').strip()
+
+            if not query:
+                break
+
+            query_list.append(query)
+            sleep(0.1)
 
 
 if __name__ == '__main__':
