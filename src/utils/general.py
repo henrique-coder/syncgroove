@@ -180,7 +180,7 @@ def download_latest_ffmpeg(path: Union[AnyStr, Path, PathLike]) -> None:
     else:
         raise Exception('FFmpeg download is only supported on Windows. (for now)')
 
-def check_ffmpeg_binary(path: Union[AnyStr, Path, PathLike]) -> bool:
+def is_valid_ffmpeg_binary(path: Union[AnyStr, Path, PathLike]) -> bool:
     """
     Check if the FFmpeg binary is valid by running the '-version' command.
     :param path: The path to the FFmpeg binary.
