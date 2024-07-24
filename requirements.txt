@@ -2,3 +2,4 @@ httpx
 remotezip
 validators
 yt-dlp
+colorama
