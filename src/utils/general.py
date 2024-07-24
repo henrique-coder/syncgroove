@@ -11,22 +11,77 @@ from typing import *
 from httpx import get, head, HTTPError
 from remotezip import RemoteZip
 from validators import url as is_url, ValidationError
+from colorama import init as colorama_init, Fore as ColoramaFore
 
 # Local imports
-from .config import Config as MainConfig
+from .config import Config
 
 
-def set_terminal_title(title: AnyStr, os_name: str) -> None:
+def init_colorama(autoreset: bool = False) -> None:
+    """
+    Initialize the colorama module.
+    """
+
+    colorama_init(autoreset=autoreset)
+
+class ColoredTerminalText:
+    """
+    A class to represent colored text.
+    """
+
+    black = ColoramaFore.BLACK
+    red = ColoramaFore.RED
+    white = ColoramaFore.WHITE
+    green = ColoramaFore.GREEN
+    blue = ColoramaFore.BLUE
+    yellow = ColoramaFore.YELLOW
+    cyan = ColoramaFore.CYAN
+    magenta = ColoramaFore.MAGENTA
+
+    light_black = ColoramaFore.LIGHTBLACK_EX
+    light_red = ColoramaFore.LIGHTRED_EX
+    light_white = ColoramaFore.LIGHTWHITE_EX
+    light_green = ColoramaFore.LIGHTGREEN_EX
+    light_blue = ColoramaFore.LIGHTBLUE_EX
+    light_yellow = ColoramaFore.LIGHTYELLOW_EX
+    light_cyan = ColoramaFore.LIGHTCYAN_EX
+    light_magenta = ColoramaFore.LIGHTMAGENTA_EX
+
+class CustomBracket(ColoredTerminalText):
+    """
+    Custom terminal brackets
+    """
+
+    def __init__(self, text: str, color: ColoredTerminalText, jump_lines: int = 0) -> None:
+        """
+        Initialize the CustomBracket class.
+        :param text: The text to display inside the brackets.
+        :param color: The color of the text.
+        :param jump_lines: The number of lines to jump before displaying the brackets.
+        """
+
+        self.color = color
+        self.text = text
+        self.jump_lines = jump_lines
+
+    def __str__(self) -> str:
+        """
+        Get the string representation of the CustomBracket class.
+        :return: The string representation of the CustomBracket class.
+        """
+
+        return '\n' * self.jump_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
+
+def set_terminal_title(title: AnyStr) -> None:
     """
     Set the terminal title on Windows and Linux.
     :param title: The title to set.
-    :param os_name: The name of the operating system.
     """
 
     try:
-        if os_name == 'windows':
+        if Config.os_name == 'windows':
             windll.kernel32.SetConsoleTitleW(title)
-        elif os_name == 'linux':
+        elif Config.os_name == 'linux':
             run(['echo', '-ne', f'\033]0;{title}\007'], shell=True)
     except (OSError, WinError, SubprocessError):
         raise Exception('Failed to set terminal title.')
@@ -55,19 +110,22 @@ def is_valid_url(url: AnyStr, online_check: bool = False) -> bool:
 
     return bool_value
 
-def clear_terminal(os_name: str) -> None:
+def clear_terminal(jump_lines: int = 0) -> None:
     """
     Clear the terminal screen on Windows and Linux.
-    :param os_name: The name of the operating system.
+    :param jump_lines: The number of lines to jump after clearing the terminal.
     """
 
     try:
-        if os_name == 'windows':
+        if Config.os_name == 'windows':
             run(['cls', '>nul', '2>&1'], shell=True)
-        elif os_name == 'linux':
+        elif Config.os_name == 'linux':
             run(['clear'], shell=True)
     except (OSError, SubprocessError):
         raise Exception('Failed to clear terminal.')
+
+    if jump_lines > 0:
+        print('\n' * (jump_lines - 1))
 
 def make_dirs(base_path: Union[AnyStr, Path, PathLike], path_list: List[Union[AnyStr, Path, PathLike]] = None) -> None:
     """
@@ -85,14 +143,14 @@ def make_dirs(base_path: Union[AnyStr, Path, PathLike], path_list: List[Union[An
     except (FileExistsError, FileNotFoundError):
         raise Exception('Failed to create directories.')
 
-def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike], os_name: str) -> None:
+def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike]) -> None:
     """
     Download the binary of the latest FFmpeg build from the gh@GyanD/codexffmpeg repository.
     :param filepath: The output path + filename of the FFmpeg binary.
     :param os_name: The name of the operating system.
     """
 
-    if os_name == 'windows':
+    if Config.os_name == 'windows':
         gh_repo_owner = 'GyanD'
         gh_repo_name = 'codexffmpeg'
 
@@ -107,7 +165,7 @@ def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike], os_name: str
 
         github_repository = f'https://github.com/{gh_repo_owner}/{gh_repo_name}'
         build_name = f'ffmpeg-{response_data['tag_name']}-essentials_build'
-        temporary_ffmpeg_path = Path(MainConfig.temporary_app_path + '.downloaded_ffmpeg')
+        temporary_ffmpeg_path = Path(Config.temporary_path + '.downloaded_ffmpeg')
 
         try:
             with RemoteZip(f'{github_repository}/releases/latest/download/{build_name}.zip') as r_zip:
