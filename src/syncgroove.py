@@ -18,15 +18,14 @@ from utils.general import (
     download_latest_ffmpeg,
     is_valid_ffmpeg_binary,
     open_windows_filedialog_selector,
-    get_latest_app_version
+    get_latest_app_version,
+    extract_lines_from_file
 )
 
 
 def main() -> None:
-    # # # print(open_windows_filedialog_selector('Select a file with the URLs/Queries (one by line)', [('Text files', '*.txt'), ('All files', '*.*')]))
-
     # Set the terminal title
-    set_terminal_title(Config.fancy_name + ' ' + Config.version)
+    set_terminal_title(Config.fancy_name + ' ' + Config.version + ' - by gh@Henrique Coder')
 
     # Initialize Colorama for colored terminal output
     init_colorama(autoreset=True)
@@ -73,6 +72,35 @@ def main() -> None:
     #             clear_terminal()
     #             print(f'{Bracket('error', Color.red, 1)} {Color.red}The FFmpeg binary file exists but is not working properly, re-downloading it...')
     #             download_latest_ffmpeg(ffmpeg_tool_path)
+
+    # Ask the user if they want to load the queries from a file or write them manually
+    print(
+        f'{Bracket('+', Color.yellow, 1)} {Color.yellow}You can load your queries from a {Color.cyan}local file {Color.yellow}or simply {Color.cyan}write them manually{Color.yellow}.'
+        f'\n\n{Bracket('-', Color.white)} {Color.white}To choose a local file, leave the input below blank and press ENTER.'
+        f'\n{Bracket('-', Color.white)} {Color.white}To write the queries, type in the song name or song link and press ENTER.'
+        f'\n\n{Bracket('#', Color.red)} {Color.red}The list of links/queries must have one item per line; if the last line is empty, the download will start'
+    )
+
+    user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
+
+    # Load queries from a file
+    if not user_input:
+        clear_terminal(1)
+        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Loading queries from a file...')
+
+        queries_filepath = open_windows_filedialog_selector('Select a file with the URLs/Queries (one by line)', [('Text files', '*.txt'), ('All files', '*.*')])
+
+        if not queries_filepath:
+            clear_terminal(1)
+            print(f'{Bracket('error', Color.red, 1)} {Color.red}No file selected, exiting...')
+            exit(1)
+
+        query_list = extract_lines_from_file(queries_filepath)
+
+        if not query_list:
+            clear_terminal(1)
+            print(f'{Bracket('error', Color.red, 1)} {Color.red}The file is empty or cannot be read, exiting...')
+            exit(1)
 
 
 if __name__ == '__main__':
