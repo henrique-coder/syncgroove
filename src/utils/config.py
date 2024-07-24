@@ -9,4 +9,4 @@ class Config:
     version = '0.0.1'
     name = 'syncgroove'
     fancy_name = 'SyncGroove'
-    temporary_path = Path((gettempdir() or '/tmp') + f'/{name}').resolve().as_posix()
+    temporary_path = Path((gettempdir() or '/tmp') + f'/{name}-{version}').resolve().as_posix()
