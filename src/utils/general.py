@@ -1,9 +1,9 @@
 # Built-in imports
 from ctypes import windll, WinError
-from os import PathLike
+from os import PathLike, remove as remove_file
 from pathlib import Path
 from shutil import rmtree, move
-from subprocess import run, SubprocessError
+from subprocess import run as subprocess_run, PIPE as subprocess_PIPE, SubprocessError, CalledProcessError
 from tkinter import Tk, filedialog as tk_filedialog
 from typing import *
 
@@ -16,13 +16,6 @@ from colorama import init as colorama_init, Fore as ColoramaFore
 # Local imports
 from .config import Config
 
-
-def init_colorama(autoreset: bool = False) -> None:
-    """
-    Initialize the colorama module.
-    """
-
-    colorama_init(autoreset=autoreset)
 
 class ColoredTerminalText:
     """
@@ -72,6 +65,13 @@ class CustomBracket(ColoredTerminalText):
 
         return '\n' * self.jump_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
 
+def init_colorama(autoreset: bool = False) -> None:
+    """
+    Initialize the colorama module.
+    """
+
+    colorama_init(autoreset=autoreset)
+
 def set_terminal_title(title: AnyStr) -> None:
     """
     Set the terminal title on Windows and Linux.
@@ -79,11 +79,11 @@ def set_terminal_title(title: AnyStr) -> None:
     """
 
     try:
-        if Config.os_name == 'windows':
+        if Config.is_windows:
             windll.kernel32.SetConsoleTitleW(title)
-        elif Config.os_name == 'linux':
-            run(['echo', '-ne', f'\033]0;{title}\007'], shell=True)
-    except (OSError, WinError, SubprocessError):
+        elif Config.is_linux:
+            subprocess_run(['echo', '-ne', f'\033]0;{title}\007'], shell=True)
+    except (OSError, WinError, SubprocessError, CalledProcessError):
         raise Exception('Failed to set terminal title.')
 
 def is_valid_url(url: AnyStr, online_check: bool = False) -> bool:
@@ -117,10 +117,10 @@ def clear_terminal(jump_lines: int = 0) -> None:
     """
 
     try:
-        if Config.os_name == 'windows':
-            run(['cls', '>nul', '2>&1'], shell=True)
-        elif Config.os_name == 'linux':
-            run(['clear'], shell=True)
+        if Config.is_windows:
+            subprocess_run(['cls'], shell=True)
+        elif Config.is_linux:
+            subprocess_run(['clear'], shell=True)
     except (OSError, SubprocessError):
         raise Exception('Failed to clear terminal.')
 
@@ -143,14 +143,13 @@ def make_dirs(base_path: Union[AnyStr, Path, PathLike], path_list: List[Union[An
     except (FileExistsError, FileNotFoundError):
         raise Exception('Failed to create directories.')
 
-def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike]) -> None:
+def download_latest_ffmpeg(path: Union[AnyStr, Path, PathLike]) -> None:
     """
     Download the binary of the latest FFmpeg build from the gh@GyanD/codexffmpeg repository.
-    :param filepath: The output path + filename of the FFmpeg binary.
-    :param os_name: The name of the operating system.
+    :param path: The output path + filename of the FFmpeg binary.
     """
 
-    if Config.os_name == 'windows':
+    if Config.is_windows:
         gh_repo_owner = 'GyanD'
         gh_repo_name = 'codexffmpeg'
 
@@ -170,12 +169,29 @@ def download_latest_ffmpeg(filepath: Union[AnyStr, Path, PathLike]) -> None:
         try:
             with RemoteZip(f'{github_repository}/releases/latest/download/{build_name}.zip') as r_zip:
                 r_zip.extract(f'{build_name}/bin/ffmpeg.exe', temporary_ffmpeg_path)
-                move(Path(temporary_ffmpeg_path, f'{build_name}/bin/ffmpeg.exe'), Path(filepath).resolve())
+
+                if Path(path).exists:
+                    remove_file(path)
+
+                move(Path(temporary_ffmpeg_path, f'{build_name}/bin/ffmpeg.exe'), Path(path).resolve())
                 rmtree(temporary_ffmpeg_path)
         except Exception:
             raise Exception('Failed to download the latest FFmpeg build.')
     else:
         raise Exception('FFmpeg download is only supported on Windows. (for now)')
+
+def check_ffmpeg_binary(path: Union[AnyStr, Path, PathLike]) -> bool:
+    """
+    Check if the FFmpeg binary is valid by running the '-version' command.
+    :param path: The path to the FFmpeg binary.
+    :return: True if the FFmpeg binary is valid, False otherwise
+    """
+
+    try:
+        subprocess_run([Path(path).as_posix(), '-version'], stdout=subprocess_PIPE, stderr=subprocess_PIPE)
+        return True
+    except (OSError, SubprocessError, CalledProcessError):
+        return False
 
 def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: Union[AnyStr, Path, PathLike] = None) -> Optional[str]:
     """
@@ -197,3 +213,16 @@ def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[s
     tk.destroy()
 
     return Path(input_filepath).resolve().as_posix() if input_filepath else None
+
+def get_latest_app_version() -> Optional[str]:
+    url = 'https://cdn.jsdelivr.net/gh/Henrique-Coder/syncgroove@main/version.json'
+
+    try:
+        response = get(url, follow_redirects=False, timeout=10)
+
+        if response.is_success:
+            return str(response.json()['current'])
+    except HTTPError:
+        return None
+
+    return None
