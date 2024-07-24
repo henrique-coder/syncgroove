@@ -226,3 +226,22 @@ def get_latest_app_version() -> Optional[str]:
         return None
 
     return None
+
+
+def extract_lines_from_file(path: Union[AnyStr, Path], fix_lines: bool = False) -> Optional[List[str]]:
+    """
+    Extract lines from a file.
+    :param path: The path to the file.
+    :param fix_lines: If True, strip whitespace, remove empty lines, and remove duplicate lines. If False, include all lines as they are in the file.
+    :return: The extracted lines from the file or None if the file does not exist or cannot be read.
+    """
+
+    try:
+        extracted_lines = Path(path).read_text('utf-8').splitlines()
+    except (FileNotFoundError, PermissionError, UnicodeDecodeError):
+        return None
+
+    if fix_lines:
+        return list(set([line.strip() for line in extracted_lines if line.strip()]))
+    else:
+        return list(extracted_lines)
