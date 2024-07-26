@@ -8,13 +8,18 @@ from tkinter import Tk, filedialog as tk_filedialog
 from typing import *
 
 # Third-party imports
+from colorama import init as colorama_init, Fore as ColoramaFore
+from faker import Faker
 from httpx import get, head, HTTPError
 from remotezip import RemoteZip
 from validators import url as is_url, ValidationError
-from colorama import init as colorama_init, Fore as ColoramaFore
 
 # Local imports
 from .config import Config
+
+
+# Constants
+fake = Faker()
 
 
 class ColoredTerminalText:
@@ -86,16 +91,17 @@ def set_terminal_title(title: AnyStr) -> None:
     except (OSError, WinError, SubprocessError, CalledProcessError):
         raise Exception('Failed to set terminal title.')
 
-def is_valid_url(url: AnyStr, online_check: bool = False) -> bool:
+def is_valid_url(url: AnyStr, online_check: bool = False) -> Optional[bool]:
     """
     Check if a URL is valid and reachable online.
     :param url: The URL to check.
     :param online_check: If True, check if the URL is reachable online.
-    :return: True if the URL is valid and reachable online, False otherwise.
+    :return: True if the URL is valid, False if the URL is invalid, and None if the URL is unreachable online.
     """
 
     try:
         bool_value = bool(is_url(str(url)))
+
         if not bool_value:
             return False
     except ValidationError:
@@ -103,10 +109,10 @@ def is_valid_url(url: AnyStr, online_check: bool = False) -> bool:
 
     if online_check:
         try:
-            response = head(url, follow_redirects=True, timeout=10)
-            return True if response.is_success or response.is_redirect else False
+            response = head(url, headers={'X-Forwarded-For': fake.ipv4_public()}, follow_redirects=True, timeout=5)
+            return True if response.is_success or response.is_redirect else None
         except HTTPError:
-            return False
+            return None
 
     return bool_value
 

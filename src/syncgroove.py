@@ -83,8 +83,8 @@ def main() -> None:
     )
 
     user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
-
-    query_list = list()
+    urls = list()
+    queries = list()
 
     # Load queries from a file
     if not user_input:
@@ -105,11 +105,22 @@ def main() -> None:
             print(f'{Bracket('error', Color.red, 1)} {Color.red}The file is empty or cannot be read, exiting...')
             exit(1)
 
-        query_list.extend(extracted_queries)
+        for query in extracted_queries:
+            validation_value = is_valid_url(query, online_check=True)
+
+            if validation_value:
+                urls.append(query)
+            elif validation_value is False:
+                queries.append(query)
 
     # Write queries manually
     else:
-        query_list.append(user_input)
+        validation_value = is_valid_url(user_input, online_check=True)
+
+        if validation_value:
+            urls.append(user_input)
+        elif validation_value is False:
+            queries.append(user_input)
 
         while True:
             query = input(f'{Color.light_white} ›{Color.blue} ').strip()
@@ -117,8 +128,15 @@ def main() -> None:
             if not query:
                 break
 
-            query_list.append(query)
-            sleep(0.1)
+            validation_value = is_valid_url(query, online_check=True)
+
+            if validation_value:
+                urls.append(query)
+            elif validation_value is False:
+                queries.append(query)
+
+    clear_terminal(1)
+    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Queries loaded successfully, starting the download process...')
 
 
 if __name__ == '__main__':
