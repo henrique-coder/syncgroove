@@ -1,5 +1,6 @@
+colorama
+faker
 httpx
 remotezip
 validators
 yt-dlp
-colorama
