@@ -5,7 +5,6 @@ __pycache__
 
 # Directories
 .debug
-node_modules
 
 # Files
 # ...
