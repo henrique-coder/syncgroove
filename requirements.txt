@@ -4,3 +4,4 @@ httpx
 remotezip
 validators
 yt-dlp
+orjson
