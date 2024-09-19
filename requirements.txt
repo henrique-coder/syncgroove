@@ -5,3 +5,4 @@ remotezip
 validators
 yt-dlp
 orjson
+pillow
