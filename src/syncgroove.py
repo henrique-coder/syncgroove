@@ -29,7 +29,7 @@ def main() -> None:
     set_terminal_title(Config.fancy_name + ' ' + Config.version + ' - by gh@Henrique Coder')
 
     # Initialize Colorama for colored terminal output
-    init_colorama(autoreset=True)
+    init_colorama(auto_reset=True)
 
     # # Check if the app version is up-to-date
     # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application is up-to-date...')
@@ -98,7 +98,7 @@ def main() -> None:
             print(f'{Bracket('error', Color.red, 1)} {Color.red}No file selected, exiting...')
             exit(1)
 
-        extracted_queries = extract_lines_from_file(queries_filepath)
+        extracted_queries = extract_lines_from_file(queries_filepath, True)
 
         if not extracted_queries:
             clear_terminal(1)
@@ -137,6 +137,8 @@ def main() -> None:
 
     clear_terminal(1)
     print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Queries loaded successfully, starting the download process...')
+
+    print(queries)
 
 
 if __name__ == '__main__':
