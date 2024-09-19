@@ -16,7 +16,7 @@ from utils.general import (
     is_valid_url,
     clear_terminal,
     make_dirs,
-    download_latest_app_icon,
+    download_app_icon,
     is_image_corrupted,
     download_latest_ffmpeg,
     open_windows_filedialog_selector,
@@ -60,11 +60,11 @@ def main() -> None:
     # if not app_icon_path.exists():
     #     clear_terminal(Config)
     #     print(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The application icon file does not exist, downloading it...')
-    #     download_latest_app_icon(app_icon_path)
+    #     download_app_icon(app_icon_path)
     # elif is_image_corrupted(app_icon_path):
     #     clear_terminal(Config)
     #     print(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The application icon file exists but is corrupted, re-downloading it...')
-    #     download_latest_app_icon(app_icon_path)
+    #     download_app_icon(app_icon_path)
     # else:
     #     clear_terminal(Config)
     #     print(f'{Bracket('success', Color.green, 1)} {Color.green}The application icon file exists and is working properly')

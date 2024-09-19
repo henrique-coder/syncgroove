@@ -1,21 +1,21 @@
 # Built-in imports
 from ctypes import windll, WinError
-from os import PathLike, remove as remove_file
+from os import PathLike, remove as remove_file, environ, pathsep
 from pathlib import Path
 from shutil import rmtree, move
-from subprocess import run as subprocess_run, PIPE as subprocess_PIPE, SubprocessError, CalledProcessError
+from subprocess import run as subprocess_run, PIPE as SubprocessError, CalledProcessError
 from tkinter import Tk, filedialog as tk_filedialog
+from datetime import datetime
 from typing import *
 
 # Third-party imports
 from colorama import init as colorama_init, Fore as ColoramaFore
 from faker import Faker
 from httpx import get, head, HTTPError
-from remotezip import RemoteZip
 from validators import url as is_url, ValidationError
-
-# Local imports
-from .config import Config
+from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, JSONDecodeError
+from PIL import Image
+from unzip_http import RemoteZipFile
 
 
 # Constants
@@ -77,19 +77,28 @@ def init_colorama(auto_reset: bool = False) -> None:
 
     colorama_init(autoreset=auto_reset)
 
-def set_terminal_title(title: str) -> None:
+def set_terminal_title(config_obj: type, title: str) -> None:
     """
     Set the terminal title on Windows and Linux.
+    :param config_obj: The configuration object.
     :param title: The title to set.
     """
 
     try:
-        if Config.is_windows:
+        if config_obj.is_windows:
             windll.kernel32.SetConsoleTitleW(title)
-        elif Config.is_linux:
+        elif config_obj.is_linux:
             subprocess_run(['echo', '-ne', f'\033]0;{title}\007'], shell=True)
     except (OSError, WinError, SubprocessError, CalledProcessError):
         raise Exception('Failed to set terminal title.')
+
+def add_directory_to_system_path(path: PathLike) -> None:
+    """
+    Add a directory to the system PATH.
+    :param path: The directory to add to the system PATH.
+    """
+
+    environ['PATH'] += pathsep + Path(path).resolve().as_posix()
 
 def is_valid_url(url: str, online_check: bool = False) -> Optional[bool]:
     """
@@ -116,24 +125,27 @@ def is_valid_url(url: str, online_check: bool = False) -> Optional[bool]:
 
     return bool_value
 
-def clear_terminal(jump_lines: int = 0) -> None:
+def clear_terminal(config_obj: type, jump_lines: int = 0) -> None:
     """
     Clear the terminal screen on Windows and Linux.
+    :param config_obj: The configuration object.
     :param jump_lines: The number of lines to jump after clearing the terminal.
     """
 
     try:
-        if Config.is_windows:
+        if config_obj.is_windows:
             subprocess_run(['cls'], shell=True)
-        elif Config.is_linux:
+        elif config_obj.is_linux:
             subprocess_run(['clear'], shell=True)
+        else:
+            raise Exception('The current operating system is not supported.')
     except (OSError, SubprocessError):
         raise Exception('Failed to clear terminal.')
 
     if jump_lines > 0:
         print('\n' * (jump_lines - 1))
 
-def make_dirs(base_path: Union[AnyStr, Path, PathLike], path_list: List[Union[AnyStr, Path, PathLike]] = None) -> None:
+def make_dirs(base_path: PathLike, path_list: List[PathLike] = None) -> None:
     """
     Create directories in the specified path or create a single directory.
     :param base_path: The base path to create the directories in.
@@ -149,57 +161,79 @@ def make_dirs(base_path: Union[AnyStr, Path, PathLike], path_list: List[Union[An
     except (FileExistsError, FileNotFoundError):
         raise Exception('Failed to create directories.')
 
-def download_latest_ffmpeg(path: Union[AnyStr, Path, PathLike]) -> None:
+def download_latest_ffmpeg(config_obj: type) -> None:
     """
     Download the binary of the latest FFmpeg build from the gh@GyanD/codexffmpeg repository.
-    :param path: The output path + filename of the FFmpeg binary.
+    :param config_obj: The configuration object.
     """
 
-    if Config.is_windows:
-        gh_repo_owner = 'GyanD'
-        gh_repo_name = 'codexffmpeg'
+    gh_repo_owner = 'BtbN'
+    gh_repo_name = 'FFmpeg-Builds'
 
-        api_url = f'https://api.github.com/repos/{gh_repo_owner}/{gh_repo_name}/releases/latest'
-        try: response = get(api_url)
-        except HTTPError: raise Exception('Failed to fetch the latest release data.')
-
-        if not response.is_success:
-            raise Exception('Failed to fetch the latest release data.')
-
-        response_data = response.json()
-
-        github_repository = f'https://github.com/{gh_repo_owner}/{gh_repo_name}'
-        build_name = f'ffmpeg-{response_data['tag_name']}-essentials_build'
-        temporary_ffmpeg_path = Path(Config.temporary_path + '.downloaded_ffmpeg')
-
-        try:
-            with RemoteZip(f'{github_repository}/releases/latest/download/{build_name}.zip') as r_zip:
-                r_zip.extract(f'{build_name}/bin/ffmpeg.exe', temporary_ffmpeg_path)
-
-                if Path(path).exists:
-                    remove_file(path)
-
-                move(Path(temporary_ffmpeg_path, f'{build_name}/bin/ffmpeg.exe'), Path(path).resolve())
-                rmtree(temporary_ffmpeg_path)
-        except Exception:
-            raise Exception('Failed to download the latest FFmpeg build.')
-    else:
-        raise Exception('FFmpeg download is only supported on Windows. (for now)')
-
-def is_valid_ffmpeg_binary(path: Union[AnyStr, Path, PathLike]) -> bool:
-    """
-    Check if the FFmpeg binary is valid by running the '-version' command.
-    :param path: The path to the FFmpeg binary.
-    :return: True if the FFmpeg binary is valid, False otherwise
-    """
+    api_url = f'https://api.github.com/repos/{gh_repo_owner}/{gh_repo_name}/releases/latest'
 
     try:
-        subprocess_run([Path(path).as_posix(), '-version'], stdout=subprocess_PIPE, stderr=subprocess_PIPE)
-        return True
-    except (OSError, SubprocessError, CalledProcessError):
-        return False
+        r = get(api_url, follow_redirects=False, timeout=10)
+    except HTTPError:
+        raise Exception('Failed to fetch the latest release data.')
 
-def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: Union[AnyStr, Path, PathLike] = None) -> Optional[str]:
+    if not r.is_success:
+        raise Exception('Server returned an error while fetching the latest release data.')
+
+    r_data = orjson_loads(r.content)
+
+    ffmpeg_base_path = Path(config_obj.tools_path, 'ffmpeg')
+    ffmpeg_base_tmp_path = Path(ffmpeg_base_path, '.tmp')
+    local_build_publish_timestamp_path = Path(ffmpeg_base_path, 'version.json').resolve()
+    latest_build_publish_timestamp = int(datetime.strptime(r_data['published_at'], '%Y-%m-%dT%H:%M:%SZ').timestamp())
+
+    if not local_build_publish_timestamp_path.exists():
+        Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'timestamp': 0}, option=OPT_INDENT_2))
+
+    try:
+        local_build_publish_timestamp = int(orjson_loads(local_build_publish_timestamp_path.read_bytes())['timestamp'])
+    except (JSONDecodeError, ValueError):
+        local_build_publish_timestamp = 0
+
+    if local_build_publish_timestamp == latest_build_publish_timestamp:
+        return None
+    else:
+        class AvailableFFmpegBuilds:
+            win64 = 'ffmpeg-master-latest-win64-gpl.zip'
+            linux64 = 'ffmpeg-master-latest-linux64-gpl.tar.xz'
+
+        if config_obj.is_windows:
+            for item in ffmpeg_base_path.iterdir():
+                if item.is_dir():
+                    rmtree(item)
+                elif item.is_file() and item.name != 'version.json':
+                    remove_file(item)
+
+            download_url = f'https://github.com/{gh_repo_owner}/{gh_repo_name}/releases/download/latest/{AvailableFFmpegBuilds.win64}'
+            output_filename = Path(AvailableFFmpegBuilds.win64)
+
+            try:
+                rzf = RemoteZipFile(download_url)
+                source_binary_folder = f'{output_filename.stem}/bin/'
+                files = [item[0] for item in rzf.files.items() if item[0].startswith(source_binary_folder) and item[0] != source_binary_folder]
+                rzf.extractall(ffmpeg_base_tmp_path, members=files)
+
+                for item in Path(ffmpeg_base_tmp_path, source_binary_folder).resolve().iterdir():
+                    move(item, ffmpeg_base_path)
+
+                rmtree(ffmpeg_base_tmp_path)
+
+                Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'timestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2))
+            except Exception as e:
+                raise Exception(f'Failed to download the latest FFmpeg build. Error: {e}')
+
+            Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'timestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2))
+        elif config_obj.is_linux:
+            raise Exception(f'The Linux operating system is not yet fully supported. Please manually download the latest build of FFmpeg from https://github.com/BtbN/FFmpeg-Builds/releases/latest and extract the binary files to the "syncgroove-{config_obj.version}/tools/ffmpeg" directory.')
+        else:
+            raise Exception('The current operating system is not supported.')
+
+def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: PathLike = None) -> Optional[str]:
     """
     Open a Windows file dialog to select a file.
     :param title: The title of the file dialog.
@@ -221,20 +255,25 @@ def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[s
     return Path(input_filepath).resolve().as_posix() if input_filepath else None
 
 def get_latest_app_version() -> Optional[str]:
+    """
+    Get the latest version of the application from the repository.
+    :return: The latest version of the application or None if the version cannot be fetched.
+    """
+
+
     url = 'https://raw.githubusercontent.com/Henrique-Coder/syncgroove/main/version.json'
 
     try:
         response = get(url, follow_redirects=False, timeout=10)
 
         if response.is_success:
-            return str(response.json()['current'])
-    except HTTPError:
+            return str(orjson_loads(response.content)['latest'])
+    except (HTTPError, JSONDecodeError):
         return None
 
     return None
 
-
-def extract_lines_from_file(path: Union[AnyStr, Path], fix_lines: bool = False) -> Optional[List[str]]:
+def extract_lines_from_file(path: PathLike, fix_lines: bool = False) -> Optional[List[str]]:
     """
     Extract lines from a file.
     :param path: The path to the file.
@@ -251,3 +290,36 @@ def extract_lines_from_file(path: Union[AnyStr, Path], fix_lines: bool = False) 
         return list(set([line.strip() for line in extracted_lines if line.strip()]))
     else:
         return list(extracted_lines)
+
+def download_app_icon(path: PathLike) -> None:
+    """
+    Download the application icon from the repository.
+    :param path: The output path + filename of the app icon.
+    """
+
+    icon_url = 'https://cdn.jsdelivr.net/gh/Henrique-Coder/syncgroove/icon.ico'
+
+    try:
+        response = get(icon_url, follow_redirects=False, timeout=30)
+
+        if response.is_success:
+            Path(path).write_bytes(response.content)
+        else:
+            raise Exception('Failed to download the app icon.')
+    except (HTTPError, PermissionError, FileNotFoundError):
+        raise Exception('Failed to download the app icon.')
+
+def is_image_corrupted(path: PathLike) -> bool:
+    """
+    Check if an image is corrupted.
+    :param path: The path to the image.
+    :return: True if the image is corrupted, False otherwise.
+    """
+
+    try:
+        with Image.open(path) as img:
+            img.verify()
+
+        return False
+    except (IOError, SyntaxError):
+        return True
