@@ -1,8 +1,8 @@
 colorama
 faker
 httpx
-remotezip
 validators
 yt-dlp
 orjson
 pillow
+unzip-http
