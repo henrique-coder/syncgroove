@@ -70,14 +70,14 @@ class CustomBracket(ColoredTerminalText):
 
         return '\n' * self.skip_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
 
-def init_colorama(autoreset: bool = False) -> None:
+def init_colorama(auto_reset: bool = False) -> None:
     """
     Initialize the colorama module.
     """
 
-    colorama_init(autoreset=autoreset)
+    colorama_init(autoreset=auto_reset)
 
-def set_terminal_title(title: AnyStr) -> None:
+def set_terminal_title(title: str) -> None:
     """
     Set the terminal title on Windows and Linux.
     :param title: The title to set.
@@ -91,7 +91,7 @@ def set_terminal_title(title: AnyStr) -> None:
     except (OSError, WinError, SubprocessError, CalledProcessError):
         raise Exception('Failed to set terminal title.')
 
-def is_valid_url(url: AnyStr, online_check: bool = False) -> Optional[bool]:
+def is_valid_url(url: str, online_check: bool = False) -> Optional[bool]:
     """
     Check if a URL is valid and reachable online.
     :param url: The URL to check.
@@ -100,7 +100,7 @@ def is_valid_url(url: AnyStr, online_check: bool = False) -> Optional[bool]:
     """
 
     try:
-        bool_value = bool(is_url(str(url)))
+        bool_value = bool(is_url(url))
 
         if not bool_value:
             return False
@@ -221,7 +221,7 @@ def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[s
     return Path(input_filepath).resolve().as_posix() if input_filepath else None
 
 def get_latest_app_version() -> Optional[str]:
-    url = 'https://cdn.jsdelivr.net/gh/Henrique-Coder/syncgroove@main/version.json'
+    url = 'https://raw.githubusercontent.com/Henrique-Coder/syncgroove/main/version.json'
 
     try:
         response = get(url, follow_redirects=False, timeout=10)
