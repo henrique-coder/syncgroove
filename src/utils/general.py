@@ -4,6 +4,7 @@ from os import PathLike, remove as remove_file, environ, pathsep
 from pathlib import Path
 from shutil import rmtree, move
 from subprocess import run as subprocess_run, PIPE as SubprocessError, CalledProcessError
+from re import search as re_search
 from tkinter import Tk, filedialog as tk_filedialog
 from datetime import datetime
 from typing import *
@@ -13,7 +14,7 @@ from colorama import init as colorama_init, Fore as ColoramaFore
 from faker import Faker
 from httpx import get, head, HTTPError
 from validators import url as is_url, ValidationError
-from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, JSONDecodeError
+from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, OPT_SORT_KEYS, JSONDecodeError
 from PIL import Image
 from unzip_http import RemoteZipFile
 
@@ -70,12 +71,12 @@ class CustomBracket(ColoredTerminalText):
 
         return '\n' * self.skip_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
 
-def init_colorama(auto_reset: bool = False) -> None:
+def init_colorama(autoreset: bool = False) -> None:
     """
     Initialize the colorama module.
     """
 
-    colorama_init(autoreset=auto_reset)
+    colorama_init(autoreset=autoreset)
 
 def set_terminal_title(config_obj: type, title: str) -> None:
     """
@@ -187,13 +188,16 @@ def download_latest_ffmpeg(config_obj: type) -> None:
     local_build_publish_timestamp_path = Path(ffmpeg_base_path, 'version.json').resolve()
     latest_build_publish_timestamp = int(datetime.strptime(r_data['published_at'], '%Y-%m-%dT%H:%M:%SZ').timestamp())
 
-    if not local_build_publish_timestamp_path.exists():
-        Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'timestamp': 0}, option=OPT_INDENT_2))
+    ffmpeg_binary_versions = {'ffmpeg': None, 'ffplay': None, 'ffprobe': None}
 
-    try:
-        local_build_publish_timestamp = int(orjson_loads(local_build_publish_timestamp_path.read_bytes())['timestamp'])
-    except (JSONDecodeError, ValueError):
+    if not local_build_publish_timestamp_path.exists():
         local_build_publish_timestamp = 0
+        Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': local_build_publish_timestamp, 'binaryVersions': ffmpeg_binary_versions}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
+    else:
+        try:
+            local_build_publish_timestamp = int(orjson_loads(local_build_publish_timestamp_path.read_bytes())['publishTimestamp'])
+        except (JSONDecodeError, ValueError):
+            local_build_publish_timestamp = 0
 
     if local_build_publish_timestamp == latest_build_publish_timestamp:
         return None
@@ -222,12 +226,17 @@ def download_latest_ffmpeg(config_obj: type) -> None:
                     move(item, ffmpeg_base_path)
 
                 rmtree(ffmpeg_base_tmp_path)
-
-                Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'timestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2))
             except Exception as e:
                 raise Exception(f'Failed to download the latest FFmpeg build. Error: {e}')
 
-            Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'timestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2))
+            try:
+                ffmpeg_binary_versions['ffmpeg'] = re_search(r'ffmpeg version ([\w-]+)', subprocess_run(['ffmpeg', '-version'], stdout=SubprocessError, stderr=SubprocessError).stdout.decode('utf-8')).group(1)
+                ffmpeg_binary_versions['ffplay'] = re_search(r'ffplay version ([\w-]+)', subprocess_run(['ffplay', '-version'], stdout=SubprocessError, stderr=SubprocessError).stdout.decode('utf-8')).group(1)
+                ffmpeg_binary_versions['ffprobe'] = re_search(r'ffprobe version ([\w-]+)', subprocess_run(['ffprobe', '-version'], stdout=SubprocessError, stderr=SubprocessError).stdout.decode('utf-8')).group(1)
+            except (CalledProcessError, AttributeError):
+                pass
+
+            Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': latest_build_publish_timestamp, 'binaryVersions': ffmpeg_binary_versions}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
         elif config_obj.is_linux:
             raise Exception(f'The Linux operating system is not yet fully supported. Please manually download the latest build of FFmpeg from https://github.com/BtbN/FFmpeg-Builds/releases/latest and extract the binary files to the "syncgroove-{config_obj.version}/tools/ffmpeg" directory.')
         else:
