@@ -27,7 +27,7 @@ from utils.general import (
 
 def main() -> None:
     # Initialize Colorama for colored terminal output
-    init_colorama(auto_reset=True)
+    init_colorama(autoreset=True)
 
     # Set the terminal title
     set_terminal_title(Config, Config.fancy_name + ' ' + Config.version + ' - by gh@Henrique Coder')
@@ -70,7 +70,7 @@ def main() -> None:
     #     print(f'{Bracket('success', Color.green, 1)} {Color.green}The application icon file exists and is working properly')
 
     # Check if FFmpeg binary file exists, if not, download it
-    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the FFmpeg is installed and up-to-date...')
+    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
     download_latest_ffmpeg(Config)
     clear_terminal(Config)
 
