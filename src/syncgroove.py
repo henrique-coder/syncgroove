@@ -5,7 +5,7 @@ from typing import *
 # Local imports
 from utils.config import Config
 from utils.functions import (
-    get_youtube_video_data_from_query, get_youtube_video_data_from_url
+    sort_urls_by_type_and_domain,
 )
 from utils.general import (
     ColoredTerminalText as Color,
@@ -53,7 +53,7 @@ def main() -> None:
     make_dirs(Config.media_path)
     make_dirs(Config.tools_path, ['ffmpeg'])
 
-    # Check if application icon file exists, if not, download it
+    # # Check if application icon file exists, if not, download it
     # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application icon file exists...')
     # app_icon_path = Path(Config.media_path, 'icon.ico')
     #
@@ -69,10 +69,10 @@ def main() -> None:
     #     clear_terminal(Config)
     #     print(f'{Bracket('success', Color.green, 1)} {Color.green}The application icon file exists and is working properly')
 
-    # Check if FFmpeg binary file exists, if not, download it
-    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
-    download_latest_ffmpeg(Config)
-    clear_terminal(Config)
+    # # Check if FFmpeg binary file exists, if not, download it
+    # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
+    # download_latest_ffmpeg(Config)
+    # clear_terminal(Config)
 
     # Add required directories to the system PATH
     add_directory_to_system_path(Path(Config.tools_path, 'ffmpeg'))
@@ -87,13 +87,12 @@ def main() -> None:
 
     user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
 
-    class Queries:
-        def reset() -> None:
-            Queries.queries = []
-            Queries.urls = []
-
+    class InputQueries:
         queries: List[str] = []
-        urls: List[str] = []
+        _urls: List[str] = []
+
+        class SortedURLs:
+            youtube: Dict[Any, Any] = {}
 
     # Load queries from a file
     if not user_input:
@@ -115,21 +114,21 @@ def main() -> None:
             exit(1)
 
         for query in extracted_queries:
-            validation_value = is_valid_url(query, online_check=True)
+            validation_value = is_valid_url(query, online_check=False)  # TODO: Change online_check to True
 
             if validation_value:
-                Queries.urls.append(query)
+                InputQueries._urls.append(query)
             elif validation_value is False:
-                Queries.queries.append(query)
+                InputQueries.queries.append(query)
 
     # Write queries manually
     else:
         validation_value = is_valid_url(user_input, online_check=True)
 
         if validation_value:
-            Queries.urls.append(user_input)
+            InputQueries._urls.append(user_input)
         elif validation_value is False:
-            Queries.queries.append(user_input)
+            InputQueries.queries.append(user_input)
 
         while True:
             query = input(f'{Color.light_white} ›{Color.blue} ').strip()
@@ -137,18 +136,18 @@ def main() -> None:
             if not query:
                 break
 
-            validation_value = is_valid_url(query, online_check=True)
+            validation_value = is_valid_url(query, online_check=False)  # TODO: Change online_check to True
 
             if validation_value:
-                Queries.urls.append(query)
+                InputQueries._urls.append(query)
             elif validation_value is False:
-                Queries.queries.append(query)
+                InputQueries.queries.append(query)
 
     clear_terminal(Config, 1)
     print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Queries loaded successfully, starting the download process...')
 
-    print(Queries.queries)
-    print(Queries.urls)
+    # Sort the URLs by their type
+    InputQueries = sort_urls_by_type_and_domain(InputQueries)
 
 
 if __name__ == '__main__':
