@@ -7,22 +7,24 @@ from typing import *
 from pysmartdl2 import SmartDL
 
 
-def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
+def sort_urls_by_type_and_domain(input_queries_obj: type, extract_playlist_items: bool = True) -> type:
     """
     Sort URLs by type (single or playlist) and domain.
     :param input_queries_obj: The InputQueries object.
+    :param extract_playlist_items: Whether to extract items from the playlists.
     :return: The updated InputQueries object.
     """
 
     def classify_urls(url: str, obj: Dict[str, Any]) -> None:
         if re_match(obj['regexes']['playlist'], url):
-            obj['urls']['playlist'].append(url)
+            obj['mixedURLs']['playlist'].append(url)
         elif re_match(obj['regexes']['single'], url):
-            obj['urls']['single'].append(url)
+            obj['mixedURLs']['single'].append(url)
 
     youtube_obj = {
         'fancyName': 'YouTube',
-        'urls': {'single': [], 'playlist': []},
+        'mixedURLs': {'single': [], 'playlist': []},
+        'singleURLs': [],
         'regexes': {
             'single': r'(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+(&[^\s]*)?$',
             'playlist': r'(https?://)?(www\.)?youtube\.com/(watch\?v=[\w-]+&list=|playlist\?list=)[\w-]+'
@@ -31,7 +33,8 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
 
     youtube_music_obj = {
         'fancyName': 'YouTube Music',
-        'urls': {'single': [], 'playlist': []},
+        'mixedURLs': {'single': [], 'playlist': []},
+        'singleURLs': [],
         'regexes': {
             'single': r'(https?://)?(www\.)?music\.youtube\.com/watch\?v=[\w-]+(&[^\s]*)?$',
             'playlist': r'(https?://)?(www\.)?music\.youtube\.com/playlist\?list=[\w-]+'
@@ -42,7 +45,6 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
         classify_urls(url, youtube_obj)  # YouTube
         classify_urls(url, youtube_music_obj)  # YouTube Music
 
-    # Update the InputQueries object with the sorted URLs
     input_queries_obj.SortedURLs.youtube = youtube_obj
     input_queries_obj.SortedURLs.youtube_music = youtube_music_obj
 
