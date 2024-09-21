@@ -5,7 +5,7 @@ from re import sub as re_sub
 from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 
 # Third-party imports
-from orjson import dumps as orjson_dumps, OPT_INDENT_2
+from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2
 from unicodedata import normalize
 from yt_dlp import YoutubeDL
 
@@ -107,13 +107,16 @@ class DLPHumanizer:
 
         Path(path).write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
 
-    def extract(self, source_data: Dict[Any, Any] = None) -> None:
+    def extract(self, source_data: Union[Dict[Any, Any], Union[str, PathLike]] = None) -> None:
         """
         Extracts all the source data from the media using yt-dlp.
         :param source_data: The source data you extracted using yt-dlp.
         """
 
         if source_data:
+            if isinstance(source_data, (str, PathLike)):
+                source_data = orjson_loads(Path(source_data).read_bytes())
+
             self._raw_youtube_data = source_data
             self._raw_youtube_streams = source_data.get('formats', [])
             self._raw_youtube_subtitles = source_data.get('subtitles', {})
@@ -127,7 +130,6 @@ class DLPHumanizer:
     def retrieve_media_info(self) -> None:
         """
         Extract and format relevant information from the raw yt-dlp response.
-        :return: The formatted media information if return_data is True, else None.
         """
 
         data = self._raw_youtube_data
@@ -189,7 +191,6 @@ class DLPHumanizer:
     def analyze_video_streams(self) -> None:
         """
         Extract and format the best video streams from the raw yt-dlp response.
-        :return: The formatted video streams if return_data is True, else None.
         """
 
         data = self._raw_youtube_streams
@@ -247,11 +248,10 @@ class DLPHumanizer:
         self.best_video_stream = self.best_video_streams[0] if self.best_video_streams else None
         self.best_video_download_url = self.best_video_stream['url'] if self.best_video_stream else None
 
-    def analyze_audio_streams(self, preferred_dubbing_language: str) -> None:
+    def analyze_audio_streams(self, preferred_languages: List[str] = None) -> None:
         """
         Extract and format the best audio streams from the raw yt-dlp response.
-        :param preferred_dubbing_language: The preferred dubbing language code to search for in the audio streams. (only valid for the best audio stream selection)
-        :return: The formatted audio streams if return_data is True, else None.
+        :param preferred_languages: A list of preferred languages for the audio streams. The list also acts as a fallback so that if the first language doesn't exist, it will try the next one. To set some priority for the original language, simply add "original" to the list. If None, the preferred language will be the original language of the video.
         """
 
         data = self._raw_youtube_streams
@@ -315,7 +315,6 @@ class DLPHumanizer:
     def analyze_subtitle_streams(self) -> None:
         """
         Extract and format the best subtitle streams from the raw yt-dlp response.
-        :return: The formatted subtitle streams if return_data is True, else None.
         """
 
         data = self._raw_youtube_subtitles
