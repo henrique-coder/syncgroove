@@ -46,12 +46,15 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
 
     return input_queries_obj
 
-def download_file(url: str, output_path: PathLike) -> None:
+def download_file(url: str, output_path: PathLike, max_connections: int = 1, enable_progress_bar: bool = True, timeout: int = 120) -> None:
     """
     Download a file from the internet.
     :param url: The URL of the file.
     :param output_path: The path where the file will be saved.
+    :param max_connections: The maximum number of connections to use.
+    :param enable_progress_bar: Whether to enable the progress bar.
+    :param timeout: The timeout for the download.
     """
 
-    download_obj = SmartDL(url, output_path)
+    download_obj = SmartDL(urls=url, dest=output_path, threads=max_connections, progress_bar=enable_progress_bar, timeout=timeout)
     download_obj.start()
