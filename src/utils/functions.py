@@ -1,4 +1,4 @@
-from subprocess import run as subprocess_run, CalledProcessError
+from subprocess import run as subprocess_run, CalledProcessError, PIPE
 from re import match as re_match
 from os import PathLike
 from pathlib import Path
@@ -69,10 +69,12 @@ def merge_media_files(video_path: Union[str, PathLike], audio_path: Union[str, P
     :param output_path: The path where the merged file will be saved.
     """
 
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    ffmpeg_command = f'ffmpeg -i "{Path(video_path).resolve().as_posix()}" -i "{Path(audio_path).resolve().as_posix()}" -c copy -y -hide_banner -loglevel error "{output_path}"'
+    output_path = Path(output_path).resolve()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    ffmpeg_command = ['ffmpeg', '-i', Path(video_path).resolve().as_posix(), '-i', Path(audio_path).resolve().as_posix(), '-c', 'copy', '-y', '-hide_banner', '-loglevel', 'error', output_path.as_posix()]
 
     try:
-        subprocess_run(ffmpeg_command, shell=True, check=True)
+        subprocess_run(ffmpeg_command, shell=False, check=True, stderr=PIPE)
     except CalledProcessError as e:
-        raise Exception(f'An error occurred while merging the files: {e}')
+        raise Exception(f'An error occurred while merging the files: {e.stderr.decode()}')
