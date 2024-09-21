@@ -3,7 +3,7 @@ from ctypes import windll, WinError
 from os import PathLike, remove as remove_file, environ, pathsep
 from pathlib import Path
 from shutil import rmtree, move
-from subprocess import run as subprocess_run, PIPE as SubprocessError, CalledProcessError
+from subprocess import run as subprocess_run, SubprocessError, CalledProcessError
 from re import search as re_search
 from tkinter import Tk, filedialog as tk_filedialog
 from datetime import datetime
@@ -93,7 +93,7 @@ def set_terminal_title(config_obj: type, title: str) -> None:
     except (OSError, WinError, SubprocessError, CalledProcessError):
         raise Exception('Failed to set terminal title.')
 
-def add_directory_to_system_path(path: PathLike) -> None:
+def add_directory_to_system_path(path: Union[str, PathLike]) -> None:
     """
     Add a directory to the system PATH.
     :param path: The directory to add to the system PATH.
@@ -146,7 +146,7 @@ def clear_terminal(config_obj: type, jump_lines: int = 0) -> None:
     if jump_lines > 0:
         print('\n' * (jump_lines - 1))
 
-def make_dirs(base_path: PathLike, path_list: List[PathLike] = None) -> None:
+def make_dirs(base_path: Union[str, PathLike], path_list: List[Union[str, PathLike]] = None) -> None:
     """
     Create directories in the specified path or create a single directory.
     :param base_path: The base path to create the directories in.
@@ -242,7 +242,7 @@ def download_latest_ffmpeg(config_obj: type) -> None:
         else:
             raise Exception('The current operating system is not supported.')
 
-def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: PathLike = None) -> Optional[str]:
+def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: Union[str, PathLike] = None) -> Optional[str]:
     """
     Open a Windows file dialog to select a file.
     :param title: The title of the file dialog.
@@ -282,7 +282,7 @@ def get_latest_app_version() -> Optional[str]:
 
     return None
 
-def extract_lines_from_file(path: PathLike, fix_lines: bool = False) -> Optional[List[str]]:
+def extract_lines_from_file(path: Union[str, PathLike], fix_lines: bool = False) -> Optional[List[str]]:
     """
     Extract lines from a file.
     :param path: The path to the file.
@@ -300,7 +300,7 @@ def extract_lines_from_file(path: PathLike, fix_lines: bool = False) -> Optional
     else:
         return list(extracted_lines)
 
-def download_app_icon(path: PathLike) -> None:
+def download_app_icon(path: Union[str, PathLike]) -> None:
     """
     Download the application icon from the repository.
     :param path: The output path + filename of the app icon.
@@ -318,7 +318,7 @@ def download_app_icon(path: PathLike) -> None:
     except (HTTPError, PermissionError, FileNotFoundError):
         raise Exception('Failed to download the app icon.')
 
-def is_image_corrupted(path: PathLike) -> bool:
+def is_image_corrupted(path: Union[str, PathLike]) -> bool:
     """
     Check if an image is corrupted.
     :param path: The path to the image.
