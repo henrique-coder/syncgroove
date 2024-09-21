@@ -7,28 +7,7 @@ from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 # Third-party imports
 from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, JSONEncodeError, JSONDecodeError
 from unicodedata import normalize
-from yt_dlp import YoutubeDL
-
-
-def format_string(query: AnyStr, max_length: int = 128) -> Optional[str]:
-    """
-    Format a string to be used as a filename or directory name. Remove special characters, limit length etc.
-    :param query: The string to be formatted.
-    :param max_length: The maximum length of the formatted string. If the string is longer, it will be truncated.
-    :return: The formatted string. If the input string is empty or None, return None.
-    """
-
-    if not query or not query.strip():
-        return None
-
-    normalized_string = normalize('NFKD', str(query)).encode('ASCII', 'ignore').decode('utf-8')
-    sanitized_string = re_sub(r'\s+', ' ', re_sub(r'[^a-zA-Z0-9\-_()[\]{}!$#+;,. ]', '', normalized_string)).strip()
-
-    if len(sanitized_string) > max_length:
-        cutoff = sanitized_string[:max_length].rfind(' ')
-        sanitized_string = sanitized_string[:cutoff] if cutoff != -1 else sanitized_string[:max_length]
-
-    return sanitized_string
+from yt_dlp import YoutubeDL, utils as yt_dlp_utils
 
 
 def get_value(data: Dict[Any, Any], key: Any, fallback_key: Any = None, convert_to: Type = None, default_to: Any = None) -> Any:
@@ -61,22 +40,42 @@ def get_value(data: Dict[Any, Any], key: Any, fallback_key: Any = None, convert_
 
     return value
 
+def format_string(query: AnyStr, max_length: int = 128) -> Optional[str]:
+    """
+    Format a string to be used as a filename or directory name. Remove special characters, limit length etc.
+    :param query: The string to be formatted.
+    :param max_length: The maximum length of the formatted string. If the string is longer, it will be truncated.
+    :return: The formatted string. If the input string is empty or None, return None.
+    """
+
+    if not query or not query.strip():
+        return None
+
+    normalized_string = normalize('NFKD', str(query)).encode('ASCII', 'ignore').decode('utf-8')
+    sanitized_string = re_sub(r'\s+', ' ', re_sub(r'[^a-zA-Z0-9\-_()[\]{}!$#+;,. ]', '', normalized_string)).strip()
+
+    if len(sanitized_string) > max_length:
+        cutoff = sanitized_string[:max_length].rfind(' ')
+        sanitized_string = sanitized_string[:cutoff] if cutoff != -1 else sanitized_string[:max_length]
+
+    return sanitized_string
+
 
 class DLPHumanizer:
     """
     A class to extract and format data from YouTube videos using yt-dlp.
     """
 
-    def __init__(self, url: str, quiet: bool = False, no_warnings: bool = True, ignore_errors: bool = True) -> None:
+    def __init__(self, url: str = None, quiet: bool = False, no_warnings: bool = True, ignore_errors: bool = True) -> None:
         """
         Initialize the DLPHumanizer class.
-        :param url: The YouTube video url to extract data from.
+        :param url: The YouTube video URL to extract data from. If None, it will be necessary to define the source data file later.
         :param quiet: Whether to suppress console output from yt-dlp.
         :param no_warnings: Whether to suppress warnings from yt-dlp.
         :param ignore_errors: Whether to ignore errors from yt-dlp.
         """
 
-        self._url: str = url
+        self._url: Optional[str] = url
         self._ydl_opts: Dict[str, bool] = {'extract_flat': True, 'geo_bypass': True, 'noplaylist': True, 'age_limit': None, 'quiet': quiet, 'no_warnings': no_warnings, 'ignoreerrors': ignore_errors}
         self._raw_youtube_data: Dict[Any, Any] = {}
         self._raw_youtube_streams: List[Dict[Any, Any]] = []
@@ -84,12 +83,12 @@ class DLPHumanizer:
 
         self.media_info: Dict[str, Any] = {}
 
-        self.best_video_streams: Optional[List[Dict[str, Any]]] = []
-        self.best_video_stream: Optional[Dict[str, Any]] = {}
+        self.best_video_streams: List[Dict[str, Any]] = []
+        self.best_video_stream: Dict[str, Any] = {}
         self.best_video_download_url: Optional[str] = None
 
-        self.best_audio_streams: Optional[List[Dict[str, Any]]] = []
-        self.best_audio_stream: Optional[Dict[str, Any]] = {}
+        self.best_audio_streams: List[Dict[str, Any]] = []
+        self.best_audio_stream: Dict[str, Any] = {}
         self.best_audio_download_url: Optional[str] = None
 
         self.subtitle_streams: Dict[str, List[Dict[str, str]]] = {}
@@ -111,39 +110,45 @@ class DLPHumanizer:
         except JSONEncodeError:
             raise JSONEncodeError(f'The data could not be encoded as JSON.')
 
-    def extract(self, source_data: Union[Dict[Any, Any], Union[str, PathLike]] = None) -> None:
+    def extract(self, ytdlp_data: Union[Dict[Any, Any], Union[str, PathLike]] = None) -> None:
         """
-        Extracts all the source data from the media using yt-dlp.
-        :param source_data: The source data you extracted using yt-dlp.
+        Extracts all the source data from the media using yt-dlp and formats it.
+        :param ytdlp_data: The source data to extract from. If None, the data will be extracted from the YouTube video URL.
         """
 
-        if source_data:
-            if isinstance(source_data, (str, PathLike)):
-                source_data_path = Path(source_data).resolve()
+        if self._url and ytdlp_data:
+            raise ValueError('The YouTube video URL and the source data file have both been set, set only one to continue.')
 
-                if not source_data_path.is_file():
-                    raise FileNotFoundError(f'The input "{source_data_path.as_posix()}" is not a valid file path or does not exist.')
-                if source_data_path.suffix != '.json':
-                    raise ValueError(f'The file "{source_data_path.as_posix()}" is not a JSON file.')
+        if ytdlp_data:
+            if isinstance(ytdlp_data, (str, PathLike)):
+                ytdlp_data_path = Path(ytdlp_data).resolve()
+
+                if not ytdlp_data_path.is_file():
+                    raise FileNotFoundError(f'File "{ytdlp_data_path.as_posix()}" is not a valid path or does not exist.')
+                if ytdlp_data_path.suffix != '.json':
+                    raise ValueError(f'File "{ytdlp_data_path.as_posix()}" is not a JSON file.')
 
                 try:
-                    source_data = orjson_loads(source_data_path.read_bytes())
-                except FileNotFoundError:
-                    raise FileNotFoundError(f'The file "{source_data_path.as_posix()}" could not be found.')
-                except JSONDecodeError:
-                    raise JSONDecodeError(f'The file "{source_data_path.as_posix()}" could not be decoded as JSON.')
+                    ytdlp_data = orjson_loads(ytdlp_data_path.read_bytes())
+                except (FileNotFoundError, JSONDecodeError) as e:
+                    raise type(e)(f'Error with file "{ytdlp_data_path.as_posix()}": {str(e)}')
 
-            self._raw_youtube_data = source_data
-            self._raw_youtube_streams = source_data.get('formats', [])
-            self._raw_youtube_subtitles = source_data.get('subtitles', {})
-        else:
-            with YoutubeDL(self._ydl_opts) as ydl:
-                self._raw_youtube_data = ydl.extract_info(self._url, download=False, process=True)
+            self._raw_youtube_data = ytdlp_data
+            self._raw_youtube_streams = ytdlp_data.get('formats', [])
+            self._raw_youtube_subtitles = ytdlp_data.get('subtitles', {})
+        elif self._url:
+            try:
+                with YoutubeDL(self._ydl_opts) as ydl:
+                    self._raw_youtube_data = ydl.extract_info(self._url, download=False, process=True)
+            except (yt_dlp_utils.DownloadError, yt_dlp_utils.ExtractorError, Exception) as e:
+                raise type(e)(f'Error with URL "{self._url}": {str(e)}')
 
             self._raw_youtube_streams = self._raw_youtube_data.get('formats', [])
             self._raw_youtube_subtitles = self._raw_youtube_data.get('subtitles', {})
+        else:
+            raise ValueError('Neither YouTube video URL nor source data file has been set. Set at least one to continue.')
 
-    def retrieve_media_info(self) -> None:
+    def analyze_media_info(self) -> None:
         """
         Extract and format relevant information from the raw yt-dlp response.
         """
@@ -308,7 +313,7 @@ class DLPHumanizer:
             codec = stream.get('acodec', '')
             codec_parts = codec.split('.', 1)
             youtube_format_id = int(get_value(stream, 'format_id').split('-')[0])
-            youtube_format_note = stream.get('format_note')
+            youtube_format_note = stream.get('format_note', '')
 
             return {
                 'url': stream.get('url'),
@@ -318,7 +323,7 @@ class DLPHumanizer:
                 'extension': format_id_extension_map.get(youtube_format_id, 'mp3'),
                 'bitrate': stream.get('abr'),
                 'qualityNote': youtube_format_note,
-                'isOriginalAudio': '(default)' in youtube_format_note,
+                'isOriginalAudio': '(default)' in youtube_format_note or youtube_format_note.islower(),
                 'size': stream.get('filesize'),
                 'samplerate': stream.get('asr'),
                 'channels': stream.get('audio_channels'),
@@ -336,10 +341,10 @@ class DLPHumanizer:
             if preferred_language == 'original':
                 self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['isOriginalAudio']]
             else:
-                self.best_audio_streams = [stream for stream in self.best_audio_streams if (stream['language'] or '') == preferred_language]
+                self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == preferred_language]
 
-            self.best_audio_stream = self.best_audio_streams[0]
-            self.best_audio_download_url = self.best_audio_stream['url']
+            self.best_audio_stream = self.best_audio_streams[0] if self.best_audio_streams else {}
+            self.best_audio_download_url = self.best_audio_stream['url'] if self.best_audio_stream else None
 
     def analyze_subtitle_streams(self) -> None:
         """
