@@ -5,11 +5,9 @@ from re import sub as re_sub
 from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 
 # Third-party imports
-from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2
+from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, JSONEncodeError, JSONDecodeError
 from unicodedata import normalize
 from yt_dlp import YoutubeDL
-
-from pprint import pprint
 
 
 def format_string(query: AnyStr, max_length: int = 128) -> Optional[str]:
@@ -97,7 +95,7 @@ class DLPHumanizer:
         self.subtitle_streams: Dict[str, List[Dict[str, str]]] = {}
 
     @staticmethod
-    def save_json(path: Union[AnyStr, Path, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
+    def save_json(output_path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
         """
         Save a dictionary/list to a JSON file.
         :param path: The path to save the JSON file to.
@@ -105,7 +103,13 @@ class DLPHumanizer:
         :param indent_code: Whether to indent the JSON code. (2 spaces)
         """
 
-        Path(path).write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
+        output_path = Path(output_path).resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            output_path.write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
+        except JSONEncodeError:
+            raise JSONEncodeError(f'The data could not be encoded as JSON.')
 
     def extract(self, source_data: Union[Dict[Any, Any], Union[str, PathLike]] = None) -> None:
         """
@@ -115,7 +119,19 @@ class DLPHumanizer:
 
         if source_data:
             if isinstance(source_data, (str, PathLike)):
-                source_data = orjson_loads(Path(source_data).read_bytes())
+                source_data_path = Path(source_data).resolve()
+
+                if not source_data_path.is_file():
+                    raise FileNotFoundError(f'The input "{source_data_path.as_posix()}" is not a valid file path or does not exist.')
+                if source_data_path.suffix != '.json':
+                    raise ValueError(f'The file "{source_data_path.as_posix()}" is not a JSON file.')
+
+                try:
+                    source_data = orjson_loads(source_data_path.read_bytes())
+                except FileNotFoundError:
+                    raise FileNotFoundError(f'The file "{source_data_path.as_posix()}" could not be found.')
+                except JSONDecodeError:
+                    raise JSONDecodeError(f'The file "{source_data_path.as_posix()}" could not be decoded as JSON.')
 
             self._raw_youtube_data = source_data
             self._raw_youtube_streams = source_data.get('formats', [])
@@ -248,10 +264,10 @@ class DLPHumanizer:
         self.best_video_stream = self.best_video_streams[0] if self.best_video_streams else None
         self.best_video_download_url = self.best_video_stream['url'] if self.best_video_stream else None
 
-    def analyze_audio_streams(self, preferred_languages: List[str] = None) -> None:
+    def analyze_audio_streams(self, preferred_language: str = None) -> None:
         """
         Extract and format the best audio streams from the raw yt-dlp response.
-        :param preferred_languages: A list of preferred languages for the audio streams. The list also acts as a fallback so that if the first language doesn't exist, it will try the next one. To set some priority for the original language, simply add "original" to the list. If None, the preferred language will be the original language of the video.
+        :param preferred_language: The preferred language code of the audio stream. If "original", only the original audios will be considered. If None, all audio streams will be considered, regardless of language.
         """
 
         data = self._raw_youtube_streams
@@ -284,7 +300,7 @@ class DLPHumanizer:
             bitrate = stream.get('abr', 0)
             sample_rate = stream.get('asr', 0)
 
-            return bitrate * 1.5 + sample_rate / 1000
+            return bitrate * 0.4 + sample_rate / 1000
 
         sorted_audio_streams = sorted(audio_streams, key=calculate_score, reverse=True)
 
@@ -292,6 +308,7 @@ class DLPHumanizer:
             codec = stream.get('acodec', '')
             codec_parts = codec.split('.', 1)
             youtube_format_id = int(get_value(stream, 'format_id').split('-')[0])
+            youtube_format_note = stream.get('format_note')
 
             return {
                 'url': stream.get('url'),
@@ -300,7 +317,8 @@ class DLPHumanizer:
                 'rawCodec': codec,
                 'extension': format_id_extension_map.get(youtube_format_id, 'mp3'),
                 'bitrate': stream.get('abr'),
-                'qualityNote': stream.get('format_note'),
+                'qualityNote': youtube_format_note,
+                'isOriginalAudio': '(default)' in youtube_format_note,
                 'size': stream.get('filesize'),
                 'samplerate': stream.get('asr'),
                 'channels': stream.get('audio_channels'),
@@ -311,6 +329,17 @@ class DLPHumanizer:
         self.best_audio_streams = [extract_stream_info(stream) for stream in sorted_audio_streams] if sorted_audio_streams else None
         self.best_audio_stream = self.best_audio_streams[0] if self.best_audio_streams else None
         self.best_audio_download_url = self.best_audio_stream['url'] if self.best_audio_stream else None
+
+        if preferred_language:
+            preferred_language = preferred_language.strip().lower()
+
+            if preferred_language == 'original':
+                self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['isOriginalAudio']]
+            else:
+                self.best_audio_streams = [stream for stream in self.best_audio_streams if (stream['language'] or '') == preferred_language]
+
+            self.best_audio_stream = self.best_audio_streams[0]
+            self.best_audio_download_url = self.best_audio_stream['url']
 
     def analyze_subtitle_streams(self) -> None:
         """
