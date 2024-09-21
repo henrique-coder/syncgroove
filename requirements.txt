@@ -3,6 +3,7 @@ faker
 httpx
 validators
 yt-dlp
+pytube
 orjson
 pillow
 unzip-http
