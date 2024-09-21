@@ -53,6 +53,9 @@ def main() -> None:
     make_dirs(Config.media_path)
     make_dirs(Config.tools_path, ['ffmpeg'])
 
+    # Add required directories to the system PATH
+    add_directory_to_system_path(Path(Config.tools_path, 'ffmpeg'))
+
     # # Check if application icon file exists, if not, download it
     # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application icon file exists...')
     # app_icon_path = Path(Config.media_path, 'icon.ico')
@@ -73,9 +76,6 @@ def main() -> None:
     # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
     # download_latest_ffmpeg(Config)
     # clear_terminal(Config)
-
-    # Add required directories to the system PATH
-    add_directory_to_system_path(Path(Config.tools_path, 'ffmpeg'))
 
     # Ask the user if they want to load the queries from a file or write them manually
     print(
@@ -148,6 +148,9 @@ def main() -> None:
 
     # Sort the URLs by their type
     InputQueries = sort_urls_by_type_and_domain(InputQueries)
+    print(f'Queries: {InputQueries.queries}')
+    print(f'Single URLs (YouTube): {InputQueries.SortedURLs.youtube['urls']['single']}')
+    print(f'Playlist URLs (YouTube): {InputQueries.SortedURLs.youtube['urls']['playlist']}')
 
 
 if __name__ == '__main__':

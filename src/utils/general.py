@@ -3,7 +3,7 @@ from ctypes import windll, WinError
 from os import PathLike, remove as remove_file, environ, pathsep
 from pathlib import Path
 from shutil import rmtree, move
-from subprocess import run as subprocess_run, SubprocessError, CalledProcessError
+from subprocess import run as subprocess_run, CalledProcessError, PIPE
 from re import search as re_search
 from tkinter import Tk, filedialog as tk_filedialog
 from datetime import datetime
@@ -90,8 +90,8 @@ def set_terminal_title(config_obj: type, title: str) -> None:
             windll.kernel32.SetConsoleTitleW(title)
         elif config_obj.is_linux:
             subprocess_run(['echo', '-ne', f'\033]0;{title}\007'], shell=True)
-    except (OSError, WinError, SubprocessError, CalledProcessError):
-        raise Exception('Failed to set terminal title.')
+    except (OSError, WinError, CalledProcessError, Exception) as e:
+        raise Exception(f'Failed to set terminal title: {e}')
 
 def add_directory_to_system_path(path: Union[str, PathLike]) -> None:
     """
@@ -140,8 +140,8 @@ def clear_terminal(config_obj: type, jump_lines: int = 0) -> None:
             subprocess_run(['clear'], shell=True)
         else:
             raise Exception('The current operating system is not supported.')
-    except (OSError, SubprocessError):
-        raise Exception('Failed to clear terminal.')
+    except (OSError, CalledProcessError, Exception) as e:
+        raise Exception(f'Failed to clear terminal: {e}')
 
     if jump_lines > 0:
         print('\n' * (jump_lines - 1))
@@ -188,11 +188,9 @@ def download_latest_ffmpeg(config_obj: type) -> None:
     local_build_publish_timestamp_path = Path(ffmpeg_base_path, 'version.json').resolve()
     latest_build_publish_timestamp = int(datetime.strptime(r_data['published_at'], '%Y-%m-%dT%H:%M:%SZ').timestamp())
 
-    ffmpeg_binary_versions = {'ffmpeg': None, 'ffplay': None, 'ffprobe': None}
-
     if not local_build_publish_timestamp_path.exists():
         local_build_publish_timestamp = 0
-        Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': local_build_publish_timestamp, 'binaryVersions': ffmpeg_binary_versions}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
+        Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': local_build_publish_timestamp}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
     else:
         try:
             local_build_publish_timestamp = int(orjson_loads(local_build_publish_timestamp_path.read_bytes())['publishTimestamp'])
@@ -229,16 +227,10 @@ def download_latest_ffmpeg(config_obj: type) -> None:
             except Exception as e:
                 raise Exception(f'Failed to download the latest FFmpeg build. Error: {e}')
 
-            try:
-                ffmpeg_binary_versions['ffmpeg'] = re_search(r'ffmpeg version ([\w-]+)', subprocess_run(['ffmpeg', '-version'], stdout=SubprocessError, stderr=SubprocessError).stdout.decode('utf-8')).group(1)
-                ffmpeg_binary_versions['ffplay'] = re_search(r'ffplay version ([\w-]+)', subprocess_run(['ffplay', '-version'], stdout=SubprocessError, stderr=SubprocessError).stdout.decode('utf-8')).group(1)
-                ffmpeg_binary_versions['ffprobe'] = re_search(r'ffprobe version ([\w-]+)', subprocess_run(['ffprobe', '-version'], stdout=SubprocessError, stderr=SubprocessError).stdout.decode('utf-8')).group(1)
-            except (CalledProcessError, AttributeError):
-                pass
-
-            Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': latest_build_publish_timestamp, 'binaryVersions': ffmpeg_binary_versions}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
+            Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
         elif config_obj.is_linux:
-            raise Exception(f'The Linux operating system is not yet fully supported. Please manually download the latest build of FFmpeg from https://github.com/BtbN/FFmpeg-Builds/releases/latest and extract the binary files to the "syncgroove-{config_obj.version}/tools/ffmpeg" directory.')
+            # raise Exception(f'The Linux operating system is not yet fully supported. Please manually download the latest build of FFmpeg from https://github.com/BtbN/FFmpeg-Builds/releases/latest and extract the binary files to the "syncgroove-{config_obj.version}/tools/ffmpeg" directory.')
+            raise Exception(f'The Linux operating system is not yet fully supported. Please wait for the next version of SyncGroove to be released.')
         else:
             raise Exception('The current operating system is not supported.')
 
