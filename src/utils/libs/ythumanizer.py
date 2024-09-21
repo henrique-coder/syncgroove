@@ -4,6 +4,7 @@ from pathlib import Path
 from re import sub as re_sub, search as re_search, IGNORECASE
 from urllib import error as urllib_error
 from unicodedata import normalize
+from locale import getdefaultlocale
 from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 
 # Third-party imports
@@ -264,7 +265,7 @@ class YTHumanizer:
     def analyze_audio_streams(self, preferred_language: str = None) -> None:
         """
         Extract and format the best audio streams from the raw yt-dlp response.
-        :param preferred_language: The preferred language code of the audio stream. If "original", only the original audios will be considered. If None, all audio streams will be considered, regardless of language.
+        :param preferred_language: The preferred language code of the audio stream. If "auto", the language will be automatically selected according to the current operating system language (if not found, "original" will be used). If "original", only the original audios will be considered. If None, all audio streams will be considered, regardless of language.
         """
 
         data = self._raw_youtube_streams
@@ -330,9 +331,15 @@ class YTHumanizer:
         if preferred_language:
             preferred_language = preferred_language.strip().lower()
 
+            if preferred_language == 'auto':
+                try:
+                    system_language = getdefaultlocale()[0].split('_')[0].lower()
+                    self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == system_language]
+                except (ValueError, IndexError, Exception):
+                    preferred_language = 'original'
             if preferred_language == 'original':
                 self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['isOriginalAudio']]
-            else:
+            elif preferred_language != 'auto':
                 self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == preferred_language]
 
             self.best_audio_stream = self.best_audio_streams[0] if self.best_audio_streams else {}
