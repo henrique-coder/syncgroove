@@ -368,6 +368,26 @@ class YTHumanizerTools:
     _youtube_media_id_regex = r'(?:https?:)?(?:\/\/)?(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\S*?[^\w\s-])([\w-]{11})(?=[^\w-]|$)(?![?=&+%\w.-]*(?:[\'"][^<>]*>|<\/a>))[?=&+%\w.-]*'
     _youtube_media_playlist_id_regex = r'(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\/(?:embed\/|v\/|watch\?v=|watch\?list=(.*)&v=)?((\w|-){11})(&list=(\w+)&?)?'
 
+    def extract_media_id(url: str) -> Optional[str]:
+        """
+        Extract the YouTube media ID from a URL.
+        :param url: The URL to extract the media ID from.
+        :return: The YouTube media ID extracted from the URL. If the URL is invalid or the media ID is not found, return None.
+        """
+
+        match = re_search(YTHumanizerTools._youtube_media_id_regex, url, IGNORECASE)
+        return match.group(1) if match else None
+
+    def extract_media_playlist_id(url: str) -> Optional[str]:
+        """
+        Extract the YouTube media playlist ID from a URL.
+        :param url: The URL to extract the media playlist ID from.
+        :return: The YouTube media playlist ID extracted from the URL. If the URL is invalid or the media playlist ID is not found, return None.
+        """
+
+        match = re_search(YTHumanizerTools._youtube_media_playlist_id_regex, url, IGNORECASE)
+        return match.group(8) if match and match.group(8) else None
+
     def extract_playlist_media_urls(url: str) -> Optional[List[str]]:
         """
         Extract all video URLs from a YouTube playlist URL.
@@ -389,26 +409,6 @@ class YTHumanizerTools:
             return None
 
         return list(dict.fromkeys(playlist_videos))
-
-    def extract_media_id(url: str) -> Optional[str]:
-        """
-        Extract the YouTube media ID from a URL.
-        :param url: The URL to extract the media ID from.
-        :return: The YouTube media ID extracted from the URL. If the URL is invalid or the media ID is not found, return None.
-        """
-
-        match = re_search(YTHumanizerTools._youtube_media_id_regex, url, IGNORECASE)
-        return match.group(1) if match else None
-
-    def extract_media_playlist_id(url: str) -> Optional[str]:
-        """
-        Extract the YouTube media playlist ID from a URL.
-        :param url: The URL to extract the media playlist ID from.
-        :return: The YouTube media playlist ID extracted from the URL. If the URL is invalid or the media playlist ID is not found, return None.
-        """
-
-        match = re_search(YTHumanizerTools._youtube_media_playlist_id_regex, url, IGNORECASE)
-        return match.group(8) if match and match.group(8) else None
 
     def save_json(path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
         """
