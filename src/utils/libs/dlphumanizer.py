@@ -1,7 +1,7 @@
 # Built-in imports
 from os import PathLike
 from pathlib import Path
-from re import sub as re_sub
+from re import sub as re_sub, search as re_search, IGNORECASE
 from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 
 # Third-party imports
@@ -75,6 +75,8 @@ class DLPHumanizer:
         :param ignore_errors: Whether to ignore errors from yt-dlp.
         """
 
+        self._youtube_media_id_regex = r'(?:https?:)?(?:\/\/)?(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\S*?[^\w\s-])([\w-]{11})(?=[^\w-]|$)(?![?=&+%\w.-]*(?:[\'"][^<>]*>|<\/a>))[?=&+%\w.-]*'
+
         self._url: Optional[str] = url
         self._ydl_opts: Dict[str, bool] = {'extract_flat': True, 'geo_bypass': True, 'noplaylist': True, 'age_limit': None, 'quiet': quiet, 'no_warnings': no_warnings, 'ignoreerrors': ignore_errors}
         self._raw_youtube_data: Dict[Any, Any] = {}
@@ -92,23 +94,6 @@ class DLPHumanizer:
         self.best_audio_download_url: Optional[str] = None
 
         self.subtitle_streams: Dict[str, List[Dict[str, str]]] = {}
-
-    @staticmethod
-    def save_json(output_path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
-        """
-        Save a dictionary/list to a JSON file.
-        :param path: The path to save the JSON file to.
-        :param data: The dictionary/list to save to the JSON file.
-        :param indent_code: Whether to indent the JSON code. (2 spaces)
-        """
-
-        output_path = Path(output_path).resolve()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        try:
-            output_path.write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
-        except JSONEncodeError:
-            raise JSONEncodeError(f'The data could not be encoded as JSON.')
 
     def extract(self, ytdlp_data: Union[Dict[Any, Any], Union[str, PathLike]] = None) -> None:
         """
@@ -137,11 +122,18 @@ class DLPHumanizer:
             self._raw_youtube_streams = ytdlp_data.get('formats', [])
             self._raw_youtube_subtitles = ytdlp_data.get('subtitles', {})
         elif self._url:
+            media_id = self.extract_media_id(self._url)
+
+            if not media_id:
+                raise ValueError(f'Invalid YouTube video URL "{self._url}".')
+
+            self._url = f'https://www.youtube.com/watch?v={media_id}'
+
             try:
                 with YoutubeDL(self._ydl_opts) as ydl:
                     self._raw_youtube_data = ydl.extract_info(self._url, download=False, process=True)
             except (yt_dlp_utils.DownloadError, yt_dlp_utils.ExtractorError, Exception) as e:
-                raise type(e)(f'Error with URL "{self._url}": {str(e)}')
+                raise type(e)(f'Error extracting data from YouTube video "{self._url}": {str(e)}')
 
             self._raw_youtube_streams = self._raw_youtube_data.get('formats', [])
             self._raw_youtube_subtitles = self._raw_youtube_data.get('subtitles', {})
@@ -366,3 +358,30 @@ class DLPHumanizer:
             ]
 
         self.subtitle_streams = dict(sorted(subtitle_streams.items()))
+
+    def extract_media_id(self, url: str) -> Optional[str]:
+        """
+        Extract the YouTube media ID from a URL.
+        :param url: The URL to extract the media ID from.
+        :return: The YouTube media ID extracted from the URL. If the URL is invalid or the media ID is not found, return None.
+        """
+
+        match = re_search(self._youtube_media_id_regex, url, IGNORECASE)
+        return match.group(1) if match else None
+
+    @staticmethod
+    def save_json(output_path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
+        """
+        Save a dictionary/list to a JSON file.
+        :param path: The path to save the JSON file to.
+        :param data: The dictionary/list to save to the JSON file.
+        :param indent_code: Whether to indent the JSON code. (2 spaces)
+        """
+
+        output_path = Path(output_path).resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            output_path.write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
+        except JSONEncodeError:
+            raise JSONEncodeError(f'The data could not be encoded as JSON.')
