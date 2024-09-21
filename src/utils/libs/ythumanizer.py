@@ -2,12 +2,14 @@
 from os import PathLike
 from pathlib import Path
 from re import sub as re_sub, search as re_search, IGNORECASE
+from urllib import error as urllib_error
+from unicodedata import normalize
 from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 
 # Third-party imports
 from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, JSONEncodeError, JSONDecodeError
-from unicodedata import normalize
 from yt_dlp import YoutubeDL, utils as yt_dlp_utils
+from pytube import Playlist as YouTubePlaylist, exceptions as pytube_exceptions
 
 
 def get_value(data: Dict[Any, Any], key: Any, fallback_key: Any = None, convert_to: Type = None, default_to: Any = None) -> Any:
@@ -61,21 +63,19 @@ def format_string(query: AnyStr, max_length: int = 128) -> Optional[str]:
     return sanitized_string
 
 
-class DLPHumanizer:
+class YTHumanizer:
     """
-    A class to extract and format data from YouTube videos using yt-dlp.
+    A class for extracting and formatting data from YouTube videos using yt-dlp, facilitating access to general media information.
     """
 
-    def __init__(self, url: str = None, quiet: bool = False, no_warnings: bool = True, ignore_errors: bool = True) -> None:
+    def __init__(self, url: str = None, quiet: bool = True, no_warnings: bool = True, ignore_errors: bool = True) -> None:
         """
-        Initialize the DLPHumanizer class.
+        Initialize the YTHumanizer class.
         :param url: The YouTube video URL to extract data from. If None, it will be necessary to define the source data file later.
         :param quiet: Whether to suppress console output from yt-dlp.
         :param no_warnings: Whether to suppress warnings from yt-dlp.
         :param ignore_errors: Whether to ignore errors from yt-dlp.
         """
-
-        self._youtube_media_id_regex = r'(?:https?:)?(?:\/\/)?(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\S*?[^\w\s-])([\w-]{11})(?=[^\w-]|$)(?![?=&+%\w.-]*(?:[\'"][^<>]*>|<\/a>))[?=&+%\w.-]*'
 
         self._url: Optional[str] = url
         self._ydl_opts: Dict[str, bool] = {'extract_flat': True, 'geo_bypass': True, 'noplaylist': True, 'age_limit': None, 'quiet': quiet, 'no_warnings': no_warnings, 'ignoreerrors': ignore_errors}
@@ -122,7 +122,7 @@ class DLPHumanizer:
             self._raw_youtube_streams = ytdlp_data.get('formats', [])
             self._raw_youtube_subtitles = ytdlp_data.get('subtitles', {})
         elif self._url:
-            media_id = self.extract_media_id(self._url)
+            media_id = YTHumanizerTools.extract_media_id(self._url)
 
             if not media_id:
                 raise ValueError(f'Invalid YouTube video URL "{self._url}".')
@@ -359,18 +359,58 @@ class DLPHumanizer:
 
         self.subtitle_streams = dict(sorted(subtitle_streams.items()))
 
-    def extract_media_id(self, url: str) -> Optional[str]:
+
+class YTHumanizerTools:
+    """
+    A class with independent tools to be used with the YTHumanizer class or separately.
+    """
+
+    _youtube_media_id_regex = r'(?:https?:)?(?:\/\/)?(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\S*?[^\w\s-])([\w-]{11})(?=[^\w-]|$)(?![?=&+%\w.-]*(?:[\'"][^<>]*>|<\/a>))[?=&+%\w.-]*'
+    _youtube_media_playlist_id_regex = r'(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\/(?:embed\/|v\/|watch\?v=|watch\?list=(.*)&v=)?((\w|-){11})(&list=(\w+)&?)?'
+
+    def extract_playlist_media_urls(url: str) -> Optional[List[str]]:
+        """
+        Extract all video URLs from a YouTube playlist URL.
+        :param url: The URL of the YouTube playlist.
+        :return: A list of video URLs extracted from the playlist. If the URL is invalid, return None. If the playlist is empty or private, return an empty list.
+        """
+
+        media_playlist_id = YTHumanizerTools.extract_media_playlist_id(url)
+
+        if not media_playlist_id:
+            return None
+
+        url = f'https://www.youtube.com/playlist?list={media_playlist_id}'
+
+        try:
+            playlist = YouTubePlaylist(url)
+            playlist_videos = [f'https://www.youtube.com/watch?v={video.video_id}' for video in playlist.videos]
+        except (pytube_exceptions.PytubeError, urllib_error.HTTPError, Exception):
+            return None
+
+        return list(dict.fromkeys(playlist_videos))
+
+    def extract_media_id(url: str) -> Optional[str]:
         """
         Extract the YouTube media ID from a URL.
         :param url: The URL to extract the media ID from.
         :return: The YouTube media ID extracted from the URL. If the URL is invalid or the media ID is not found, return None.
         """
 
-        match = re_search(self._youtube_media_id_regex, url, IGNORECASE)
+        match = re_search(YTHumanizerTools._youtube_media_id_regex, url, IGNORECASE)
         return match.group(1) if match else None
 
-    @staticmethod
-    def save_json(output_path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
+    def extract_media_playlist_id(url: str) -> Optional[str]:
+        """
+        Extract the YouTube media playlist ID from a URL.
+        :param url: The URL to extract the media playlist ID from.
+        :return: The YouTube media playlist ID extracted from the URL. If the URL is invalid or the media playlist ID is not found, return None.
+        """
+
+        match = re_search(YTHumanizerTools._youtube_media_playlist_id_regex, url, IGNORECASE)
+        return match.group(8) if match and match.group(8) else None
+
+    def save_json(path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
         """
         Save a dictionary/list to a JSON file.
         :param path: The path to save the JSON file to.
@@ -378,10 +418,10 @@ class DLPHumanizer:
         :param indent_code: Whether to indent the JSON code. (2 spaces)
         """
 
-        output_path = Path(output_path).resolve()
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        path = Path(path).resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            output_path.write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
+            path.write_bytes(orjson_dumps(data, option=OPT_INDENT_2 if indent_code else None))
         except JSONEncodeError:
-            raise JSONEncodeError(f'The data could not be encoded as JSON.')
+            raise JSONEncodeError('The data could not be encoded as JSON.')
