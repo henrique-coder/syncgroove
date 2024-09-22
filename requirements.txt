@@ -8,3 +8,4 @@ orjson
 pillow
 unzip-http
 pysmartdl2
+lxml
