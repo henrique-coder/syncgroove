@@ -4,9 +4,6 @@ from typing import *
 
 # Local imports
 from utils.config import Config
-from utils.functions import (
-    sort_urls_by_type_and_domain,
-)
 from utils.general import (
     ColoredTerminalText as Color,
     CustomBracket as Bracket,
@@ -23,6 +20,7 @@ from utils.general import (
     get_latest_app_version,
     extract_lines_from_file
 )
+from utils.classifier import sort_urls_by_type_and_domain
 
 
 def main() -> None:
@@ -30,7 +28,7 @@ def main() -> None:
     init_colorama(autoreset=True)
 
     # Set the terminal title
-    set_terminal_title(Config, Config.fancy_name + ' ' + Config.version + ' - by gh@Henrique Coder')
+    set_terminal_title(Config, Config.fancy_name + ' ' + Config.version + ' - by gh@Henrique-Coder')
 
     # # Check if the app version is up-to-date
     # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application is up-to-date...')
@@ -89,7 +87,7 @@ def main() -> None:
 
     class InputQueries:
         queries: List[str] = []
-        _urls: List[str] = []
+        urls: List[str] = []
 
         class SortedURLs:
             youtube: Dict[Any, Any] = {}
@@ -117,7 +115,7 @@ def main() -> None:
             validation_value = is_valid_url(query, online_check=False)  # TODO: Change online_check to True
 
             if validation_value:
-                InputQueries._urls.append(query)
+                InputQueries.urls.append(query)
             elif validation_value is False:
                 InputQueries.queries.append(query)
 
@@ -126,7 +124,7 @@ def main() -> None:
         validation_value = is_valid_url(user_input, online_check=True)
 
         if validation_value:
-            InputQueries._urls.append(user_input)
+            InputQueries.urls.append(user_input)
         elif validation_value is False:
             InputQueries.queries.append(user_input)
 
@@ -139,7 +137,7 @@ def main() -> None:
             validation_value = is_valid_url(query, online_check=False)  # TODO: Change online_check to True
 
             if validation_value:
-                InputQueries._urls.append(query)
+                InputQueries.urls.append(query)
             elif validation_value is False:
                 InputQueries.queries.append(query)
 
@@ -148,9 +146,6 @@ def main() -> None:
 
     # Sort the URLs by their type
     InputQueries = sort_urls_by_type_and_domain(InputQueries)
-    print(f'Queries: {InputQueries.queries}')
-    print(f'Single URLs (YouTube): {InputQueries.SortedURLs.youtube['urls']['single']}')
-    print(f'Playlist URLs (YouTube): {InputQueries.SortedURLs.youtube['urls']['playlist']}')
 
 
 if __name__ == '__main__':
