@@ -96,7 +96,6 @@ class YTHumanizer:
         self.subtitle_streams: Dict[str, List[Dict[str, str]]] = {}
 
         self.available_audio_languages: List[str] = []
-        self.available_base_audio_languages: List[str] = []
 
     def extract(self, url_or_data: Union[AnyStr, PathLike, Dict[Any, Any]] = None) -> None:
         """
@@ -327,24 +326,17 @@ class YTHumanizer:
         self.best_audio_stream = self.best_audio_streams[0] if self.best_audio_streams else None
         self.best_audio_download_url = self.best_audio_stream['url'] if self.best_audio_stream else None
 
-        for stream in self.best_audio_streams:
-            language = stream.get('language')
-
-            if language:
-                self.available_audio_languages.append(language)
-                self.available_base_audio_languages.append(language.split('-')[0])
-
-        self.available_audio_languages = sorted(list(dict.fromkeys(self.available_audio_languages)))
-        self.available_base_audio_languages = sorted(list(dict.fromkeys(self.available_base_audio_languages)))
+        self.available_audio_languages = list(dict.fromkeys([stream['language'].lower() for stream in self.best_audio_streams if stream['language']]))
 
         if preferred_language:
             preferred_language = preferred_language.strip().lower()
 
             if preferred_language == 'auto':
                 try:
-                    system_language = getlocale()[0].split('_')[0].lower()
+                    system_language = getlocale()[0].lower()
+                    # system_base_language = system_language.split('_')[0]
 
-                    if system_language not in self.available_base_audio_languages:
+                    if system_language not in self.available_audio_languages:
                         raise ValueError
 
                     self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == system_language]
@@ -386,7 +378,7 @@ class YTHumanizerTools:
     """
 
     _youtube_media_id_regex = r'(?:https?:)?(?:\/\/)?(?:[0-9A-Z-]+\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\S*?[^\w\s-])([\w-]{11})(?=[^\w-]|$)(?![?=&+%\w.-]*(?:[\'"][^<>]*>|<\/a>))[?=&+%\w.-]*'
-    _youtube_media_playlist_id_regex = r'(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\/(?:embed\/|v\/|watch\?v=|watch\?list=(.*)&v=)?((\w|-){11})(&list=(\w+)&?)?'
+    _youtube_media_playlist_id_regex = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:playlist\?list=|watch\?v=|embed\/|v\/)|youtu\.be\/)(?:.*?list=)?([\w-]{34})'
 
     def extract_media_id(url: str) -> Optional[str]:
         """
@@ -398,29 +390,29 @@ class YTHumanizerTools:
         match = re_search(YTHumanizerTools._youtube_media_id_regex, url, IGNORECASE)
         return match.group(1) if match else None
 
-    def extract_media_playlist_id(url: str) -> Optional[str]:
+    def extract_playlist_id(url: str) -> Optional[str]:
         """
-        Extract the YouTube media playlist ID from a URL.
+        Extract the YouTube playlist ID from a URL.
         :param url: The URL to extract the media playlist ID from.
         :return: The YouTube media playlist ID extracted from the URL. If the URL is invalid or the media playlist ID is not found, return None.
         """
 
         match = re_search(YTHumanizerTools._youtube_media_playlist_id_regex, url, IGNORECASE)
-        return match.group(8) if match and match.group(8) else None
+        return match.group(1) if match else None
 
-    def extract_playlist_media_urls(url: str) -> Optional[List[str]]:
+    def extract_playlist_urls(url: str) -> Optional[List[str]]:
         """
         Extract all video URLs from a YouTube playlist URL.
         :param url: The URL of the YouTube playlist.
         :return: A list of video URLs extracted from the playlist. If the URL is invalid, return None. If the playlist is empty or private, return an empty list.
         """
 
-        media_playlist_id = YTHumanizerTools.extract_media_playlist_id(url)
+        playlist_id = YTHumanizerTools.extract_playlist_id(url)
 
-        if not media_playlist_id:
+        if not playlist_id:
             return None
 
-        url = f'https://www.youtube.com/playlist?list={media_playlist_id}'
+        url = f'https://www.youtube.com/playlist?list={playlist_id}'
 
         try:
             playlist = YouTubePlaylist(url)
