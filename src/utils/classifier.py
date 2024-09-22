@@ -54,7 +54,7 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
 
     classifiers = [youtube_classifier, youtube_music_classifier]
 
-    for url in input_queries_obj._urls:
+    for url in input_queries_obj.urls:
         for classifier in classifiers:
             classifier.classify(url)
 
