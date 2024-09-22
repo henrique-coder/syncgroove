@@ -58,6 +58,13 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
         for classifier in classifiers:
             classifier.classify(url)
 
+    for query in input_queries_obj.queries:
+        youtube_media_url = YTHumanizerTools.get_youtube_url_from_query(query)
+
+        if youtube_media_url:
+            for classifier in classifiers:
+                classifier.classify(youtube_media_url)
+
     input_queries_obj.SortedURLs.youtube = youtube_classifier
     input_queries_obj.SortedURLs.youtube_music = youtube_music_classifier
 
