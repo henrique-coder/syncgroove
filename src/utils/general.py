@@ -3,8 +3,7 @@ from ctypes import windll, WinError
 from os import PathLike, remove as remove_file, environ, pathsep
 from pathlib import Path
 from shutil import rmtree, move
-from subprocess import run as subprocess_run, CalledProcessError, PIPE
-from re import search as re_search
+from subprocess import run as subprocess_run, CalledProcessError
 from tkinter import Tk, filedialog as tk_filedialog
 from datetime import datetime
 from typing import *
