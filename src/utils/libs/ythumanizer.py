@@ -12,6 +12,8 @@ from typing import Any, Optional, Union, Type, AnyStr, Dict, List
 from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, JSONEncodeError, JSONDecodeError
 from yt_dlp import YoutubeDL, utils as yt_dlp_utils
 from pytube import Playlist as YouTubePlaylist, exceptions as pytube_exceptions
+from httpx import get, HTTPError
+from lxml import html
 
 
 def get_value(data: Dict[Any, Any], key: Any, fallback_key: Any = None, convert_to: Type = None, default_to: Any = None) -> Any:
@@ -333,8 +335,7 @@ class YTHumanizer:
 
             if preferred_language == 'auto':
                 try:
-                    system_language = getlocale()[0].lower()
-                    # system_base_language = system_language.split('_')[0]
+                    system_language = getlocale()[0].split('_')[0].lower()
 
                     if system_language not in self.available_audio_languages:
                         raise ValueError
@@ -421,6 +422,58 @@ class YTHumanizerTools:
             return None
 
         return list(dict.fromkeys(playlist_videos))
+
+    def get_youtube_url_from_query(query: str, language: Optional[str] = 'auto') -> Optional[str]:
+        """
+        Search for a YouTube video URL in a query string.
+        :param query: The query string to search for the YouTube video URL.
+        :param language: The language code to use for the search. If "auto", the language will be automatically selected according to the current operating system language. If None, no specific language will be sent to YouTube.
+        :return: The first YouTube video URL found in the query string. If the URL is not found, return None.
+        """
+
+        params = {'search_query': query}
+        headers = {'Accept': 'text/html', 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}
+
+        if language:
+            language = language.strip().lower()
+        else:
+            language = None
+
+        if language == 'auto':
+            try:
+                language = getlocale()[0].split('_')[0].lower()
+            except (ValueError, TypeError, Exception):
+                language = 'en'
+
+        if language:
+            params['hl'] = language
+
+        try:
+            r = get(f'https://www.youtube.com/results', params=params, headers=headers, follow_redirects=False, timeout=30)
+            r.raise_for_status()
+
+            if not r.is_success:
+                return None
+        except HTTPError:
+            return None
+
+        try:
+            tree = html.fromstring(r.content)
+            script = tree.xpath('//script[contains(text(), "ytInitialData")]/text()')
+            script_content = re_search(r'var ytInitialData = ({.*?});', script[0])
+
+            json_data = orjson_loads(script_content.group(1))['contents']['twoColumnSearchResultsRenderer']['primaryContents']['sectionListRenderer']['contents'][0]['itemSectionRenderer']['contents']
+            json_data = [i['videoRenderer'] for i in json_data if 'videoRenderer' in i]
+
+            for data in json_data:
+                video_id = str(data.get('videoId'))
+
+                if video_id:
+                    return f'https://www.youtube.com/watch?v={video_id}'
+
+            return None
+        except (IndexError, Exception):
+            return None
 
     def save_json(path: Union[str, PathLike], data: Union[Dict[Any, Any], List[Any]], indent_code: bool = True) -> None:
         """
