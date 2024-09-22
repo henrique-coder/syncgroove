@@ -458,7 +458,7 @@ class YTHumanizerTools:
             return None
 
         try:
-            tree = html.fromstring(r.content)
+            tree = html.fromstring(r.text)
             script = tree.xpath('//script[contains(text(), "ytInitialData")]/text()')
             script_content = re_search(r'var ytInitialData = ({.*?});', script[0])
 
