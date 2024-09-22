@@ -96,6 +96,7 @@ class YTHumanizer:
         self.subtitle_streams: Dict[str, List[Dict[str, str]]] = {}
 
         self.available_audio_languages: List[str] = []
+        self.available_base_audio_languages: List[str] = []
 
     def extract(self, url_or_data: Union[AnyStr, PathLike, Dict[Any, Any]] = None) -> None:
         """
@@ -326,7 +327,15 @@ class YTHumanizer:
         self.best_audio_stream = self.best_audio_streams[0] if self.best_audio_streams else None
         self.best_audio_download_url = self.best_audio_stream['url'] if self.best_audio_stream else None
 
-        self.available_audio_languages = list(dict.fromkeys([stream['language'] for stream in self.best_audio_streams if stream['language']]))
+        for stream in self.best_audio_streams:
+            language = stream.get('language')
+
+            if language:
+                self.available_audio_languages.append(language)
+                self.available_base_audio_languages.append(language.split('-')[0])
+
+        self.available_audio_languages = sorted(list(dict.fromkeys(self.available_audio_languages)))
+        self.available_base_audio_languages = sorted(list(dict.fromkeys(self.available_base_audio_languages)))
 
         if preferred_language:
             preferred_language = preferred_language.strip().lower()
@@ -335,7 +344,7 @@ class YTHumanizer:
                 try:
                     system_language = getlocale()[0].split('_')[0].lower()
 
-                    if system_language not in self.available_audio_languages:
+                    if system_language not in self.available_base_audio_languages:
                         raise ValueError
 
                     self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == system_language]
