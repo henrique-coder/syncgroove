@@ -1,10 +1,10 @@
 colorama
 faker
 httpx
-validators
-yt-dlp
-pytube
+orjson
 pillow
-unzip-http
 pysmartdl2
 scrapetube
+unzip-http
+validators
+yt-dlp
