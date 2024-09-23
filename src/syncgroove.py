@@ -145,7 +145,7 @@ def main() -> None:
             elif validation_value is False:
                 InputQueries._queries.append(query)
 
-    clear_terminal(Config, 1)
+    clear_terminal(Config)
     print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The queries/URLs are being processed. This can take a while...')
 
     # Sort the URLs by their type
