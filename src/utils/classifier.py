@@ -33,7 +33,7 @@ youtube_classifier = URLClassifier(
         'single': r'(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+(&[^\s]*)?$',
         'playlist': r'(https?://)?(www\.)?youtube\.com/(watch\?v=[\w-]+&list=|playlist\?list=)[\w-]+'
     },
-    extract_playlist_func=YTHumanizerTools.extract_playlist_urls
+    extract_playlist_func=YTHumanizerTools.get_playlist_urls
 )
 
 youtube_music_classifier = URLClassifier(
@@ -41,7 +41,7 @@ youtube_music_classifier = URLClassifier(
         'single': r'(https?://)?(www\.)?music\.youtube\.com/watch\?v=[\w-]+(&[^\s]*)?$',
         'playlist': r'(https?://)?(www\.)?music\.youtube\.com/playlist\?list=[\w-]+'
     },
-    extract_playlist_func=YTHumanizerTools.extract_playlist_urls
+    extract_playlist_func=YTHumanizerTools.get_playlist_urls
 )
 
 
@@ -59,7 +59,7 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
             classifier.classify(url)
 
     for query in input_queries_obj.queries:
-        youtube_media_url = YTHumanizerTools.get_youtube_url_from_query(query)
+        youtube_media_url = YTHumanizerTools.get_url_from_query(query)
 
         if youtube_media_url:
             for classifier in classifiers:
