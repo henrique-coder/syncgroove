@@ -4,23 +4,10 @@ from pathlib import Path
 from shutil import move
 from random import choices
 from string import ascii_letters, digits
-from typing import *
+from typing import Union, List
 
 from pysmartdl2 import SmartDL
 
-
-def download_file(url: str, output_path: Union[str, PathLike], max_connections: int = 1, enable_progress_bar: bool = True, timeout: int = 120) -> None:
-    """
-    Download a file from the internet.
-    :param url: The URL of the file.
-    :param output_path: The path where the file will be saved.
-    :param max_connections: The maximum number of connections to use.
-    :param enable_progress_bar: Whether to enable the progress bar.
-    :param timeout: The timeout for the download.
-    """
-
-    download_obj = SmartDL(urls=url, dest=output_path, threads=max_connections, progress_bar=enable_progress_bar, timeout=timeout)
-    download_obj.start()
 
 def generate_random_string(length: int) -> str:
     """
@@ -102,3 +89,16 @@ def update_media_metadata(path: Union[str, PathLike], strip_metadata: bool = Tru
 
     if temp_output_path.exists():
         move(temp_output_path, path)
+
+def download_file(url: str, output_path: Union[str, PathLike], max_connections: int = 1, enable_progress_bar: bool = True, timeout: int = 120) -> None:
+    """
+    Download a file from the internet.
+    :param url: The URL of the file.
+    :param output_path: The file path where the file will be saved.
+    :param max_connections: The maximum number of connections to use.
+    :param enable_progress_bar: Whether to enable the progress bar.
+    :param timeout: The timeout for the download.
+    """
+
+    download_obj = SmartDL(urls=url, dest=Path(output_path).resolve().as_posix(), threads=max_connections, progress_bar=enable_progress_bar, timeout=timeout)
+    download_obj.start()
