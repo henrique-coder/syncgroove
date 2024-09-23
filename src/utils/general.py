@@ -118,7 +118,7 @@ def is_valid_url(url: str, online_check: bool = False) -> Optional[bool]:
 
     if online_check:
         try:
-            response = head(url, headers={'X-Forwarded-For': fake.ipv4_public(), 'X-Real-IP': fake.ipv4_public(), 'User-Agent': fake.user_agent()}, timeout=10)
+            response = head(url, headers={'X-Forwarded-For': fake.ipv4_public(), 'X-Real-IP': fake.ipv4_public(), 'User-Agent': fake.user_agent()}, follow_redirects=True, timeout=10)
             return True if response.is_success or response.is_redirect else None
         except HTTPError:
             return None
