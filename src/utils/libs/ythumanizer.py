@@ -92,10 +92,10 @@ class YTHumanizer:
 
         self.available_audio_languages: List[str] = []
 
-    def extract(self, url: str = None) -> None:
+    def run(self, url: str = None) -> None:
         """
-        Extracts all the source data from the media using yt-dlp and formats it.
-        :param url: The URL of the YouTube video to extract the data from.
+        Run the YTHumanizer class to extract and format data from a YouTube video.
+        :param url: The URL of the YouTube video to extract data from.
         """
 
         media_id = YTHumanizerTools.extract_media_id(url)
@@ -116,7 +116,7 @@ class YTHumanizer:
 
     def analyze_media_info(self) -> None:
         """
-        Extract and format relevant information from the raw yt-dlp response.
+        Extract and format relevant media information from the raw YouTube data.
         """
 
         data = self._raw_youtube_data
@@ -177,7 +177,7 @@ class YTHumanizer:
 
     def analyze_video_streams(self) -> None:
         """
-        Extract and format the best video streams from the raw yt-dlp response.
+        Extract and format the best video streams from the raw YouTube data.
         """
 
         data = self._raw_youtube_streams
@@ -237,7 +237,7 @@ class YTHumanizer:
 
     def analyze_audio_streams(self, preferred_language: Optional[Literal['auto', 'original']] = 'auto') -> None:
         """
-        Extract and format the best audio streams from the raw yt-dlp response.
+        Extract and format the best audio streams from the raw YouTube data.
         :param preferred_language: The preferred language code of the audio stream. If "auto", the language will be automatically selected according to the current operating system language (if not found or video is not available in that language, the fallback will be "original"). If "original", only the original audios will be considered. If None, all audio streams will be considered, regardless of language.
         """
 
@@ -326,7 +326,7 @@ class YTHumanizer:
 
     def analyze_subtitle_streams(self) -> None:
         """
-        Extract and format the best subtitle streams from the raw yt-dlp response.
+        Extract and format the subtitle streams from the raw YouTube data.
         """
 
         data = self._raw_youtube_subtitles
