@@ -4,8 +4,7 @@ httpx
 validators
 yt-dlp
 pytube
-orjson
 pillow
 unzip-http
 pysmartdl2
-lxml
+scrapetube
