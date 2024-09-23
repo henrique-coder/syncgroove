@@ -1,6 +1,7 @@
 # Built-in imports
 from pathlib import Path
-from typing import *
+from datetime import datetime
+from typing import List
 
 # Local imports
 from utils.config import Config
@@ -21,6 +22,8 @@ from utils.general import (
     extract_lines_from_file
 )
 from utils.classifier import sort_urls_by_type_and_domain
+from utils.functions import download_file, update_media_metadata
+from utils.libs.ythumanizer import YTHumanizer
 
 
 def main() -> None:
@@ -30,50 +33,51 @@ def main() -> None:
     # Set the terminal title
     set_terminal_title(Config, Config.fancy_name + ' ' + Config.version + ' - by gh@Henrique-Coder')
 
-    # # Check if the app version is up-to-date
-    # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application is up-to-date...')
-    # latest_app_version = get_latest_app_version()
-    # clear_terminal(Config)
-    #
-    # if latest_app_version is not None:
-    #     if Config.version != latest_app_version:
-    #         input(
-    #             f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The local version of the application is out of date, the latest version available is {Color.green}{latest_app_version}'
-    #             f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}Download it at {Color.blue}https://github.com/Henrique-Coder/syncgroove/releases/tag/{latest_app_version} {Color.yellow}or press ENTER to continue and use it anyway (not recommended)'
-    #         )
-    # else:
-    #     input(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}Failed to check the latest version of the application, restart the application to try again or press ENTER to continue and use it anyway (not recommended)')
+    # Check if the app version is up-to-date
+    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application is up-to-date...')
+    latest_app_version = get_latest_app_version()
+    clear_terminal(Config)
+
+    if latest_app_version is not None:
+        if Config.version != latest_app_version:
+            input(
+                f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The local version of the application is out of date, the latest version available is {Color.green}{latest_app_version}'
+                f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}Download it at {Color.blue}https://github.com/Henrique-Coder/syncgroove/releases/tag/{latest_app_version} {Color.yellow}or press ENTER to continue and use it anyway (not recommended)'
+            )
+    else:
+        input(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}Failed to check the latest version of the application, restart the application to try again or press ENTER to continue and use it anyway (not recommended)')
 
     # Create the required directories
     make_dirs(Config.temporary_path)
     make_dirs(Config.main_path)
     make_dirs(Config.main_resources_path)
     make_dirs(Config.media_path)
+    make_dirs(Config.default_downloaded_musics_path)
     make_dirs(Config.tools_path, ['ffmpeg'])
 
     # Add required directories to the system PATH
     add_directory_to_system_path(Path(Config.tools_path, 'ffmpeg'))
 
-    # # Check if application icon file exists, if not, download it
-    # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application icon file exists...')
-    # app_icon_path = Path(Config.media_path, 'icon.ico')
-    #
-    # if not app_icon_path.exists():
-    #     clear_terminal(Config)
-    #     print(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The application icon file does not exist, downloading it...')
-    #     download_app_icon(app_icon_path)
-    # elif is_image_corrupted(app_icon_path):
-    #     clear_terminal(Config)
-    #     print(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The application icon file exists but is corrupted, re-downloading it...')
-    #     download_app_icon(app_icon_path)
-    # else:
-    #     clear_terminal(Config)
-    #     print(f'{Bracket('success', Color.green, 1)} {Color.green}The application icon file exists and is working properly')
+    # Check if application icon file exists, if not, download it
+    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application icon file exists...')
+    app_icon_path = Path(Config.media_path, 'icon.ico')
 
-    # # Check if FFmpeg binary file exists, if not, download it
-    # print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
-    # download_latest_ffmpeg(Config)
-    # clear_terminal(Config)
+    if not app_icon_path.exists():
+        clear_terminal(Config)
+        print(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The application icon file does not exist, downloading it...')
+        download_app_icon(app_icon_path)
+    elif is_image_corrupted(app_icon_path):
+        clear_terminal(Config)
+        print(f'{Bracket('warning', Color.yellow, 1)} {Color.yellow}The application icon file exists but is corrupted, re-downloading it...')
+        download_app_icon(app_icon_path)
+    else:
+        clear_terminal(Config)
+        print(f'{Bracket('success', Color.green, 1)} {Color.green}The application icon file exists and is working properly')
+
+    # Check if FFmpeg binary file exists, if not, download it
+    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
+    download_latest_ffmpeg(Config)
+    clear_terminal(Config)
 
     # Ask the user if they want to load the queries from a file or write them manually
     print(
@@ -86,11 +90,11 @@ def main() -> None:
     user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
 
     class InputQueries:
-        queries: List[str] = []
-        urls: List[str] = []
+        _queries: List[str] = []
+        _urls: List[str] = []
 
         class SortedURLs:
-            youtube: Dict[Any, Any] = {}
+            pass
 
     # Load queries from a file
     if not user_input:
@@ -112,21 +116,21 @@ def main() -> None:
             exit(1)
 
         for query in extracted_queries:
-            validation_value = is_valid_url(query, online_check=False)  # TODO: Change online_check to True
+            validation_value = is_valid_url(query, online_check=True)
 
             if validation_value:
-                InputQueries.urls.append(query)
+                InputQueries._urls.append(query)
             elif validation_value is False:
-                InputQueries.queries.append(query)
+                InputQueries._queries.append(query)
 
     # Write queries manually
     else:
         validation_value = is_valid_url(user_input, online_check=True)
 
         if validation_value:
-            InputQueries.urls.append(user_input)
+            InputQueries._urls.append(user_input)
         elif validation_value is False:
-            InputQueries.queries.append(user_input)
+            InputQueries._queries.append(user_input)
 
         while True:
             query = input(f'{Color.light_white} ›{Color.blue} ').strip()
@@ -134,18 +138,46 @@ def main() -> None:
             if not query:
                 break
 
-            validation_value = is_valid_url(query, online_check=False)  # TODO: Change online_check to True
+            validation_value = is_valid_url(query, online_check=True)
 
             if validation_value:
-                InputQueries.urls.append(query)
+                InputQueries._urls.append(query)
             elif validation_value is False:
-                InputQueries.queries.append(query)
+                InputQueries._queries.append(query)
 
     clear_terminal(Config, 1)
-    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Queries loaded successfully, starting the download process...')
+    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The queries/URLs are being processed. This can take a while...')
 
     # Sort the URLs by their type
     InputQueries = sort_urls_by_type_and_domain(InputQueries)
+
+    # Download the media files
+    clear_terminal(Config)
+
+    for url in InputQueries.SortedURLs.youtube.single_urls:
+        yt_humanizer = YTHumanizer()
+
+        try:
+            yt_humanizer.run(url)
+        except Exception as e:
+            print(f'{Bracket('error', Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
+
+        yt_humanizer.analyze_media_info()
+        yt_humanizer.analyze_audio_streams(preferred_language='auto')
+
+        media_info = yt_humanizer.media_info
+        stream_info = yt_humanizer.best_audio_stream
+
+        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}')
+        media_path = Path(Config.default_downloaded_musics_path, f'{media_info['cleanTitle']}.{stream_info['extension']}').resolve()
+        # cover_image_path = Path(Config.temporary_path, f'.tmp_{media_info['id']}_cover.jpg').resolve()
+
+        # download_file(url=media_info['thumbnails'][0], output_path=cover_image_path, max_connections=1, enable_progress_bar=False)
+        download_file(url=stream_info['url'], output_path=media_path, max_connections=4)
+
+        # update_media_metadata(path=media_path, title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, language=stream_info['language'], cover_image_path=cover_image_path)
+
+    print(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully!')
 
 
 if __name__ == '__main__':
