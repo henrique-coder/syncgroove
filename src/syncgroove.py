@@ -177,7 +177,7 @@ def main() -> None:
 
         # update_media_metadata(path=media_path, title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, language=stream_info['language'], cover_image_path=cover_image_path)
 
-    print(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully!')
+    input(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully!')
 
 
 if __name__ == '__main__':
