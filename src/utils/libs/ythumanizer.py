@@ -2,7 +2,7 @@
 from re import sub as re_sub, search as re_search, IGNORECASE
 from unicodedata import normalize
 from locale import getlocale
-from typing import Any, Optional, Literal, Type, AnyStr, Dict, List
+from typing import Any, AnyStr, Dict, List, Literal, Optional, Type, Union
 
 # Third-party imports
 from yt_dlp import YoutubeDL, utils as yt_dlp_utils
@@ -78,6 +78,8 @@ class YTHumanizer:
         self._raw_youtube_streams: List[Dict[Any, Any]] = []
         self._raw_youtube_subtitles: Dict[str, List[Dict[str, str]]] = {}
 
+        self.system_language = getlocale()[0].split('_')[0].lower()
+
         self.media_info: Dict[str, Any] = {}
 
         self.best_video_streams: List[Dict[str, Any]] = []
@@ -90,6 +92,7 @@ class YTHumanizer:
 
         self.subtitle_streams: Dict[str, List[Dict[str, str]]] = {}
 
+        self.available_video_qualities: List[str] = []
         self.available_audio_languages: List[str] = []
 
     def run(self, url: str = None) -> None:
@@ -175,9 +178,10 @@ class YTHumanizer:
 
         self.media_info = dict(sorted(media_info.items()))
 
-    def analyze_video_streams(self) -> None:
+    def analyze_video_streams(self, preferred_quality: Literal['all', 'best', '144p', '240p', '360p', '480p', '720p', '1080p', '1440p', '2160p', '4320p'] = 'all') -> None:
         """
         Extract and format the best video streams from the raw YouTube data.
+        :param preferred_quality: The preferred quality of the video stream. If "all", all streams will be considered and sorted by quality. If "best", only the best quality streams will be considered. If a specific quality is provided, the stream will be selected according to the chosen quality, however if the quality is not available, the best quality will be selected.
         """
 
         data = self._raw_youtube_streams
@@ -212,6 +216,7 @@ class YTHumanizer:
         def extract_stream_info(stream: Dict[Any, Any]) -> Dict[str, Any]:
             codec = stream.get('vcodec', '')
             codec_parts = codec.split('.', 1)
+            quality_note = stream.get('format_note')
             youtube_format_id = int(get_value(stream, 'format_id').split('-')[0])
 
             return {
@@ -225,7 +230,8 @@ class YTHumanizer:
                 'framerate': stream.get('fps'),
                 'bitrate': stream.get('tbr'),
                 'quality': stream.get('height'),
-                'qualityNote': stream.get('format_note'),
+                'qualityNote': quality_note,
+                'isHDR': 'hdr' in quality_note.lower() if quality_note else False,
                 'size': stream.get('filesize'),
                 'language': stream.get('language'),
                 'youtubeFormatId': youtube_format_id
@@ -235,10 +241,24 @@ class YTHumanizer:
         self.best_video_stream = self.best_video_streams[0] if self.best_video_streams else None
         self.best_video_download_url = self.best_video_stream['url'] if self.best_video_stream else None
 
-    def analyze_audio_streams(self, preferred_language: Optional[Literal['auto', 'original']] = 'auto') -> None:
+        self.available_video_qualities = list(dict.fromkeys([f'{stream['quality']}p' for stream in self.best_video_streams if stream['quality']]))
+
+        if preferred_quality != 'all':
+            preferred_quality = preferred_quality.strip().lower()
+
+            if preferred_quality == 'best' or preferred_quality not in self.available_video_qualities:
+                best_available_quality = max([stream['quality'] for stream in self.best_video_streams])
+                self.best_video_streams = [stream for stream in self.best_video_streams if stream['quality'] == best_available_quality]
+            else:
+                self.best_video_streams = [stream for stream in self.best_video_streams if stream['quality'] == int(preferred_quality.replace('p', ''))]
+
+            self.best_video_stream = self.best_video_streams[0] if self.best_video_streams else {}
+            self.best_video_download_url = self.best_video_stream['url'] if self.best_video_stream else None
+
+    def analyze_audio_streams(self, preferred_language: Union[str, Literal['all', 'original', 'auto']] = 'auto') -> None:
         """
         Extract and format the best audio streams from the raw YouTube data.
-        :param preferred_language: The preferred language code of the audio stream. If "auto", the language will be automatically selected according to the current operating system language (if not found or video is not available in that language, the fallback will be "original"). If "original", only the original audios will be considered. If None, all audio streams will be considered, regardless of language.
+        :param preferred_language: The preferred language code of the audio stream. If "all", all audio streams will be considered, regardless of language. If "original", only the original audios will be considered. If "auto", the language will be automatically selected according to the current operating system language (if not found or video is not available in that language, the fallback will be "original").
         """
 
         data = self._raw_youtube_streams
@@ -303,18 +323,16 @@ class YTHumanizer:
 
         self.available_audio_languages = list(dict.fromkeys([stream['language'].lower() for stream in self.best_audio_streams if stream['language']]))
 
-        if preferred_language:
+        if preferred_language != 'all':
             preferred_language = preferred_language.strip().lower()
 
             if preferred_language == 'auto':
                 try:
-                    system_language = getlocale()[0].split('_')[0].lower()
+                    if self.system_language not in self.available_audio_languages:
+                        raise Exception
 
-                    if system_language not in self.available_audio_languages:
-                        raise ValueError
-
-                    self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == system_language]
-                except (ValueError, TypeError, Exception):
+                    self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['language'] == self.system_language]
+                except Exception:
                     preferred_language = 'original'
             if preferred_language == 'original':
                 self.best_audio_streams = [stream for stream in self.best_audio_streams if stream['isOriginalAudio']]
