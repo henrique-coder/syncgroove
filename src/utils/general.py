@@ -216,7 +216,8 @@ def download_latest_ffmpeg(config_obj: type) -> None:
             try:
                 rzf = RemoteZipFile(download_url)
                 source_binary_folder = f'{output_filename.stem}/bin/'
-                files = [item[0] for item in rzf.files.items() if item[0].startswith(source_binary_folder) and item[0] != source_binary_folder]
+                # files = [item[0] for item in rzf.files.items() if item[0].startswith(source_binary_folder) and item[0] != source_binary_folder]
+                files = ['ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe']  # Only download the ffmpeg binary
                 rzf.extractall(ffmpeg_base_tmp_path, members=files)
 
                 for item in Path(ffmpeg_base_tmp_path, source_binary_folder).resolve().iterdir():
@@ -228,8 +229,7 @@ def download_latest_ffmpeg(config_obj: type) -> None:
 
             Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
         elif config_obj.is_linux:
-            # raise Exception(f'The Linux operating system is not yet fully supported. Please manually download the latest build of FFmpeg from https://github.com/BtbN/FFmpeg-Builds/releases/latest and extract the binary files to the "syncgroove-{config_obj.version}/tools/ffmpeg" directory.')
-            raise Exception(f'The Linux operating system is not yet fully supported. Please wait for the next version of SyncGroove to be released.')
+            pass
         else:
             raise Exception('The current operating system is not supported.')
 
