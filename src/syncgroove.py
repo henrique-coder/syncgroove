@@ -3,6 +3,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import List
 
+# Third-party imports
+from streamsnapper import Snapper, StreamBaseError
+
 # Local imports
 from utils.config import Config
 from utils.general import (
@@ -23,7 +26,6 @@ from utils.general import (
 )
 from utils.classifier import sort_urls_by_type_and_domain
 from utils.functions import download_file, update_media_metadata
-from utils.libs.ythumanizer import YTHumanizer
 
 
 def main() -> None:
@@ -154,19 +156,20 @@ def main() -> None:
     # Download the media files
     clear_terminal(Config)
 
-    for url in InputQueries.SortedURLs.youtube.single_urls:
-        yt_humanizer = YTHumanizer()
+    # Initialize the Snapper object
+    snapper = Snapper(enable_ytdlp_log=False)
 
+    for url in InputQueries.SortedURLs.youtube.single_urls:
         try:
-            yt_humanizer.run(url)
+            snapper.run(url)
         except Exception as e:
             print(f'{Bracket('error', Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
 
-        yt_humanizer.analyze_media_info()
-        yt_humanizer.analyze_audio_streams(preferred_language='auto')
+        snapper.analyze_media_info()
+        snapper.analyze_audio_streams(preferred_language='auto')
 
-        media_info = yt_humanizer.media_info
-        stream_info = yt_humanizer.best_audio_stream
+        media_info = snapper.media_info
+        stream_info = snapper.best_audio_stream
 
         print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}')
         media_path = Path(Config.default_downloaded_musics_path, f'{media_info['cleanTitle']}.{stream_info['extension']}').resolve()
@@ -178,7 +181,3 @@ def main() -> None:
         # update_media_metadata(path=media_path, title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, language=stream_info['language'], cover_image_path=cover_image_path)
 
     input(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully!')
-
-
-if __name__ == '__main__':
-    main()
