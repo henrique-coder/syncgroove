@@ -1,3 +1,4 @@
+# Built-in imports
 from subprocess import run as subprocess_run, CalledProcessError, PIPE
 from os import PathLike
 from pathlib import Path
@@ -6,6 +7,7 @@ from random import choices
 from string import ascii_letters, digits
 from typing import Union, List
 
+# Third-party imports
 from pysmartdl2 import SmartDL
 
 
