@@ -1,25 +1,16 @@
 # Built-in imports
 from ctypes import windll, WinError
-from os import PathLike, remove as remove_file, environ, pathsep
+from os import PathLike, environ, pathsep
 from pathlib import Path
-from shutil import rmtree, move
 from subprocess import run as subprocess_run, CalledProcessError
 from tkinter import Tk, filedialog as tk_filedialog
-from datetime import datetime
 from typing import *
 
 # Third-party imports
 from colorama import init as colorama_init, Fore as ColoramaFore
-from faker import Faker
 from httpx import get, head, HTTPError
 from validators import url as is_url, ValidationError
-from orjson import loads as orjson_loads, dumps as orjson_dumps, OPT_INDENT_2, OPT_SORT_KEYS, JSONDecodeError
 from PIL import Image
-from unzip_http import RemoteZipFile
-
-
-# Constants
-fake = Faker()
 
 
 class ColoredTerminalText:
@@ -118,7 +109,7 @@ def is_valid_url(url: str, online_check: bool = False) -> Optional[bool]:
 
     if online_check:
         try:
-            response = head(url, headers={'X-Forwarded-For': fake.ipv4_public(), 'X-Real-IP': fake.ipv4_public(), 'User-Agent': fake.user_agent()}, follow_redirects=True, timeout=10)
+            response = head(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}, follow_redirects=True, timeout=10)
             return True if response.is_success or response.is_redirect else None
         except HTTPError:
             return None
@@ -163,75 +154,11 @@ def make_dirs(base_path: Union[str, PathLike], path_list: List[Union[str, PathLi
 
 def download_latest_ffmpeg(config_obj: type) -> None:
     """
-    Download the binary of the latest FFmpeg build from the gh@GyanD/codexffmpeg repository.
+    Download the latest FFmpeg binary.
     :param config_obj: The configuration object.
     """
 
-    gh_repo_owner = 'BtbN'
-    gh_repo_name = 'FFmpeg-Builds'
-
-    api_url = f'https://api.github.com/repos/{gh_repo_owner}/{gh_repo_name}/releases/latest'
-
-    try:
-        r = get(api_url, follow_redirects=False, timeout=10)
-    except HTTPError:
-        raise Exception('Failed to fetch the latest release data.')
-
-    if not r.is_success:
-        raise Exception('Server returned an error while fetching the latest release data.')
-
-    r_data = orjson_loads(r.content)
-
-    ffmpeg_base_path = Path(config_obj.tools_path, 'ffmpeg')
-    ffmpeg_base_tmp_path = Path(ffmpeg_base_path, '.tmp')
-    local_build_publish_timestamp_path = Path(ffmpeg_base_path, 'version.json').resolve()
-    latest_build_publish_timestamp = int(datetime.strptime(r_data['published_at'], '%Y-%m-%dT%H:%M:%SZ').timestamp())
-
-    if not local_build_publish_timestamp_path.exists():
-        local_build_publish_timestamp = 0
-        Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': local_build_publish_timestamp}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
-    else:
-        try:
-            local_build_publish_timestamp = int(orjson_loads(local_build_publish_timestamp_path.read_bytes())['publishTimestamp'])
-        except (JSONDecodeError, ValueError):
-            local_build_publish_timestamp = 0
-
-    if local_build_publish_timestamp == latest_build_publish_timestamp:
-        return None
-    else:
-        class AvailableFFmpegBuilds:
-            win64 = 'ffmpeg-master-latest-win64-gpl.zip'
-            linux64 = 'ffmpeg-master-latest-linux64-gpl.tar.xz'
-
-        if config_obj.is_windows:
-            for item in ffmpeg_base_path.iterdir():
-                if item.is_dir():
-                    rmtree(item)
-                elif item.is_file() and item.name != 'version.json':
-                    remove_file(item)
-
-            download_url = f'https://github.com/{gh_repo_owner}/{gh_repo_name}/releases/download/latest/{AvailableFFmpegBuilds.win64}'
-            output_filename = Path(AvailableFFmpegBuilds.win64)
-
-            try:
-                rzf = RemoteZipFile(download_url)
-                source_binary_folder = f'{output_filename.stem}/bin/'
-                # files = [item[0] for item in rzf.files.items() if item[0].startswith(source_binary_folder) and item[0] != source_binary_folder]
-                files = ['ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe']  # Only download the ffmpeg binary
-                rzf.extractall(ffmpeg_base_tmp_path, members=files)
-
-                for item in Path(ffmpeg_base_tmp_path, source_binary_folder).resolve().iterdir():
-                    move(item, ffmpeg_base_path)
-
-                rmtree(ffmpeg_base_tmp_path)
-            except Exception as e:
-                raise Exception(f'Failed to download the latest FFmpeg build. Error: {e}')
-
-            Path(local_build_publish_timestamp_path).write_bytes(orjson_dumps({'publishTimestamp': latest_build_publish_timestamp}, option=OPT_INDENT_2 + OPT_SORT_KEYS))
-        elif config_obj.is_linux:
-            pass
-        else:
-            raise Exception('The current operating system is not supported.')
+    pass
 
 def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: Union[str, PathLike] = None) -> Optional[str]:
     """
@@ -261,14 +188,14 @@ def get_latest_app_version() -> Optional[str]:
     """
 
 
-    url = 'https://raw.githubusercontent.com/Henrique-Coder/syncgroove/main/version.json'
+    url = 'https://raw.githubusercontent.com/henrique-coder/syncgroove/refs/heads/main/version'
 
     try:
         response = get(url, follow_redirects=False, timeout=10)
 
         if response.is_success:
-            return str(orjson_loads(response.content)['latest'])
-    except (HTTPError, JSONDecodeError):
+            return response.text.strip()
+    except HTTPError:
         return None
 
     return None
