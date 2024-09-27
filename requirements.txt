@@ -1,10 +1,6 @@
-colorama
-faker
-httpx
-orjson
-pillow
 pysmartdl2
-scrapetube
-unzip-http
+colorama
+httpx
 validators
-yt-dlp
+pillow
+streamsnapper
