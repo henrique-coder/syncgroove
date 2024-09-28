@@ -11,6 +11,7 @@ from colorama import init as colorama_init, Fore as ColoramaFore
 from httpx import get, head, HTTPError
 from validators import url as is_url, ValidationError
 from PIL import Image
+from pyffmpeg import FFmpeg
 
 
 class ColoredTerminalText:
@@ -158,7 +159,10 @@ def download_latest_ffmpeg(config_obj: type) -> None:
     :param config_obj: The configuration object.
     """
 
-    pass
+    try:
+        add_directory_to_system_path(Path(FFmpeg(enable_log=False).get_ffmpeg_bin()).parent)
+    except (FileNotFoundError, PermissionError, Exception):
+        raise Exception('Failed to download the latest FFmpeg binary.')
 
 def open_windows_filedialog_selector(title: str, allowed_filetypes: List[Tuple[str, str]] = [('All files', '*.*')], icon_filepath: Union[str, PathLike] = None) -> Optional[str]:
     """
@@ -224,7 +228,7 @@ def download_app_icon(path: Union[str, PathLike]) -> None:
     :param path: The output path + filename of the app icon.
     """
 
-    icon_url = 'https://cdn.jsdelivr.net/gh/Henrique-Coder/syncgroove/icon.ico'
+    icon_url = 'https://raw.githubusercontent.com/henrique-coder/syncgroove/refs/heads/main/icon.ico'
 
     try:
         response = get(icon_url, follow_redirects=False, timeout=30)
