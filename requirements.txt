@@ -1,8 +1,8 @@
 colorama
 httpx
 pillow
+platformdirs
 pyffmpeg
 pysmartdl2
 streamsnapper
 validators
-platformdirs
