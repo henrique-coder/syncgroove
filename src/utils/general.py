@@ -4,7 +4,7 @@ from os import PathLike, environ, pathsep
 from pathlib import Path
 from subprocess import run as subprocess_run, CalledProcessError
 from tkinter import Tk, filedialog as tk_filedialog
-from typing import *
+from typing import List, Tuple, Optional, Union
 
 # Third-party imports
 from colorama import init as colorama_init, Fore as ColoramaFore
@@ -37,6 +37,7 @@ class ColoredTerminalText:
     light_cyan = ColoramaFore.LIGHTCYAN_EX
     light_magenta = ColoramaFore.LIGHTMAGENTA_EX
 
+
 class CustomBracket(ColoredTerminalText):
     """
     Custom terminal brackets
@@ -61,6 +62,7 @@ class CustomBracket(ColoredTerminalText):
         """
 
         return '\n' * self.skip_lines + f'{ColoredTerminalText.white}[{self.color}{self.text}{ColoredTerminalText.white}]'
+
 
 def init_colorama(autoreset: bool = False) -> None:
     """
