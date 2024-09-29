@@ -1,7 +1,9 @@
 # Built-in imports
 from pathlib import Path
 from datetime import datetime
+from logging import getLogger, CRITICAL
 from typing import List
+from sys import exit
 
 # Third-party imports
 from streamsnapper import Snapper, StreamBaseError
@@ -25,7 +27,7 @@ from utils.general import (
     extract_lines_from_file
 )
 from utils.classifier import sort_urls_by_type_and_domain
-from utils.functions import download_file, update_media_metadata
+from utils.functions import download_file, transcode_and_edit_metadata
 
 
 def main() -> None:
@@ -55,10 +57,9 @@ def main() -> None:
     make_dirs(Config.main_resources_path)
     make_dirs(Config.media_path)
     make_dirs(Config.default_downloaded_musics_path)
-    make_dirs(Config.tools_path, ['ffmpeg'])
 
     # Add required directories to the system PATH
-    add_directory_to_system_path(Path(Config.tools_path, 'ffmpeg'))
+    # ...
 
     # Check if application icon file exists, if not, download it
     print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking if the application icon file exists...')
@@ -76,108 +77,130 @@ def main() -> None:
         clear_terminal(Config)
         print(f'{Bracket('success', Color.green, 1)} {Color.green}The application icon file exists and is working properly')
 
+    # Set the logging level to CRITICAL for the FFmpeg and FFprobe classes
+    getLogger('pyffmpeg.pseudo_ffprobe.FFprobe').setLevel(CRITICAL)
+    getLogger('pyffmpeg.misc.Paths').setLevel(CRITICAL)
+
     # Check if FFmpeg binary file exists, if not, download it
     print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Checking and downloading the latest FFmpeg binary files (if necessary)...')
     download_latest_ffmpeg(Config)
     clear_terminal(Config)
 
     # Ask the user if they want to load the queries from a file or write them manually
-    print(
-        f'{Bracket('+', Color.yellow, 1)} {Color.yellow}You can load your queries from a {Color.cyan}local file {Color.yellow}or simply {Color.cyan}write them manually{Color.yellow}.'
-        f'\n\n{Bracket('-', Color.white)} {Color.white}To choose a local file, leave the input below blank and press ENTER.'
-        f'\n{Bracket('-', Color.white)} {Color.white}To write the queries, type in the song name or song link and press ENTER.'
-        f'\n\n{Bracket('#', Color.red)} {Color.red}The list of links/queries must have one item per line; if the last line is empty, the download will start'
-    )
+    while True:
+        print(
+            f'{Bracket('+', Color.yellow, 1)} {Color.yellow}You can load your queries from a {Color.cyan}local file {Color.yellow}or simply {Color.cyan}write them manually{Color.yellow}.'
+            f'\n\n{Bracket('-', Color.white)} {Color.white}To choose a local file, leave the first input below blank and press ENTER.'
+            f'\n{Bracket('-', Color.white)} {Color.white}To write the queries, type in the song name or song link and press ENTER.'
+            f'\n\n{Bracket('#', Color.red)} {Color.red}The list of links/queries must have one item per line; if the last line is empty, the download will start'
+        )
 
-    user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
+        user_input = input(f'{Color.light_white} ›{Color.blue} ').strip()
 
-    class InputQueries:
-        _queries: List[str] = []
-        _urls: List[str] = []
+        # Create a new InputQueries class
+        class InputQueries:
+            _queries: List[str] = []
+            _urls: List[str] = []
 
-        class SortedURLs:
-            pass
+            class SortedURLs:
+                pass
 
-    # Load queries from a file
-    if not user_input:
-        clear_terminal(Config, 1)
-        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Loading queries from a file...')
-
-        queries_filepath = open_windows_filedialog_selector('Select a file with the URLs/Queries (one by line)', [('Text files', '*.txt'), ('All files', '*.*')])
-
-        if not queries_filepath:
+        # Load queries from a file
+        if not user_input:
             clear_terminal(Config, 1)
-            print(f'{Bracket('error', Color.red, 1)} {Color.red}No file selected, exiting...')
-            exit(1)
+            print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Loading queries from a file...')
 
-        extracted_queries = extract_lines_from_file(queries_filepath, fix_lines=True)
+            queries_filepath = open_windows_filedialog_selector('Select a file with the URLs/Queries (one by line)', [('Text files', '*.txt'), ('All files', '*.*')])
 
-        if not extracted_queries:
-            clear_terminal(Config, 1)
-            print(f'{Bracket('error', Color.red, 1)} {Color.red}The file is empty or cannot be read, exiting...')
-            exit(1)
+            if not queries_filepath:
+                clear_terminal(Config, 1)
+                print(f'{Bracket('error', Color.red, 1)} {Color.red}No file selected, exiting...')
+                exit(1)
 
-        for query in extracted_queries:
-            validation_value = is_valid_url(query, online_check=True)
+            extracted_queries = extract_lines_from_file(queries_filepath, fix_lines=True)
+
+            if not extracted_queries:
+                clear_terminal(Config, 1)
+                print(f'{Bracket('error', Color.red, 1)} {Color.red}The file is empty or cannot be read, exiting...')
+                exit(1)
+
+            for query in extracted_queries:
+                validation_value = is_valid_url(query, online_check=False)
+
+                if validation_value:
+                    InputQueries._urls.append(query)
+                elif validation_value is False:
+                    InputQueries._queries.append(query)
+
+        # Write queries manually
+        else:
+            validation_value = is_valid_url(user_input, online_check=False)
 
             if validation_value:
-                InputQueries._urls.append(query)
+                InputQueries._urls.append(user_input)
             elif validation_value is False:
-                InputQueries._queries.append(query)
+                InputQueries._queries.append(user_input)
 
-    # Write queries manually
-    else:
-        validation_value = is_valid_url(user_input, online_check=True)
+            while True:
+                query = input(f'{Color.light_white} ›{Color.blue} ').strip()
 
-        if validation_value:
-            InputQueries._urls.append(user_input)
-        elif validation_value is False:
-            InputQueries._queries.append(user_input)
+                if not query:
+                    break
 
-        while True:
-            query = input(f'{Color.light_white} ›{Color.blue} ').strip()
+                validation_value = is_valid_url(query, online_check=False)
 
-            if not query:
-                break
+                if validation_value:
+                    InputQueries._urls.append(query)
+                elif validation_value is False:
+                    InputQueries._queries.append(query)
 
-            validation_value = is_valid_url(query, online_check=True)
+        clear_terminal(Config)
+        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The queries/URLs are being processed. This can take a while...')
 
-            if validation_value:
-                InputQueries._urls.append(query)
-            elif validation_value is False:
-                InputQueries._queries.append(query)
+        # Sort the URLs by their type
+        InputQueries = sort_urls_by_type_and_domain(InputQueries)
 
+        # Download the media files
+        clear_terminal(Config)
+
+        # Initialize the Snapper object
+        snapper = Snapper(enable_ytdlp_log=False)
+
+        for url in InputQueries.SortedURLs.youtube.single_urls:
+            try:
+                snapper.run(url)
+            except Exception as e:
+                print(f'{Bracket('error', Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
+
+            snapper.analyze_media_info()
+            snapper.analyze_audio_streams(preferred_language='auto')
+
+            media_info = snapper.media_info
+            stream_info = snapper.best_audio_stream
+
+            cover_image_path = Path(Config.temporary_path, f'.tmp_{media_info['id']}_cover.jpg').resolve()
+            audio_path = Path(Config.default_downloaded_musics_path, f'{media_info['cleanTitle']}.{stream_info['extension']}').resolve()
+            print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
+            download_file(url=media_info['thumbnails'][0], output_path=cover_image_path, max_connections=2)
+            download_file(url=stream_info['url'], output_path=audio_path, max_connections=8)
+
+            print(f'{Bracket('info', Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
+            transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, cover_image=cover_image_path)
+
+        # Exit the application or continue
+        exit_input = input(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully! Press ENTER to exit...') # Press ENTER to continue or type anything to exit:
+        exit(0)
+
+        #if exit_input:
+        #    exit(0)
+        #else:
+        #    clear_terminal(Config)
+
+
+if __name__ == '__main__':
     clear_terminal(Config)
-    print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The queries/URLs are being processed. This can take a while...')
+    main()
 
-    # Sort the URLs by their type
-    InputQueries = sort_urls_by_type_and_domain(InputQueries)
-
-    # Download the media files
-    clear_terminal(Config)
-
-    # Initialize the Snapper object
-    snapper = Snapper(enable_ytdlp_log=False)
-
-    for url in InputQueries.SortedURLs.youtube.single_urls:
-        try:
-            snapper.run(url)
-        except Exception as e:
-            print(f'{Bracket('error', Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
-
-        snapper.analyze_media_info()
-        snapper.analyze_audio_streams(preferred_language='auto')
-
-        media_info = snapper.media_info
-        stream_info = snapper.best_audio_stream
-
-        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}')
-        media_path = Path(Config.default_downloaded_musics_path, f'{media_info['cleanTitle']}.{stream_info['extension']}').resolve()
-        # cover_image_path = Path(Config.temporary_path, f'.tmp_{media_info['id']}_cover.jpg').resolve()
-
-        # download_file(url=media_info['thumbnails'][0], output_path=cover_image_path, max_connections=1, enable_progress_bar=False)
-        download_file(url=stream_info['url'], output_path=media_path, max_connections=4)
-
-        # update_media_metadata(path=media_path, title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, language=stream_info['language'], cover_image_path=cover_image_path)
-
-    input(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully!')
+# Foster the People - Don't Stop (The Fat Rat Remix)
+# https://www.youtube.com/watch?v=4N1iwQxiHrs
+# https://www.youtube.com/playlist?list=PLRBp0Fe2GpgnymQGm0yIxcdzkQsPKwnBD
