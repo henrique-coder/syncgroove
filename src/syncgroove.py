@@ -2,7 +2,7 @@
 from pathlib import Path
 from datetime import datetime
 from logging import getLogger, CRITICAL
-from typing import List
+from typing import Any, Dict, List, Callable
 from sys import exit
 
 # Third-party imports
@@ -15,7 +15,7 @@ from utils.general import (
     CustomBracket as Bracket,
     init_colorama,
     set_terminal_title,
-    add_directory_to_system_path,
+    # add_directory_to_system_path,
     is_valid_url,
     clear_terminal,
     make_dirs,
@@ -103,12 +103,16 @@ def main() -> None:
             _urls: List[str] = []
 
             class SortedURLs:
-                pass
+                class youtube:
+                    raw_name, fancy_name, mixed_urls, single_urls, regexes, extract_playlist_func = None, None, List[Any], List[Any], List[Any], Callable
+
+                class youtube_music:
+                    raw_name, fancy_name, mixed_urls, single_urls, regexes, extract_playlist_func = None, None, List[Any], List[Any], List[Any], Callable
 
         # Load queries from a file
         if not user_input:
             clear_terminal(Config, 1)
-            print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Loading queries from a file...')
+            print(f'{Bracket('info', Color.blue)} {Color.blue}Loading queries from a file...')
 
             queries_filepath = open_windows_filedialog_selector('Select a file with the URLs/Queries (one by line)', [('Text files', '*.txt'), ('All files', '*.*')])
 
@@ -155,22 +159,33 @@ def main() -> None:
                     InputQueries._queries.append(query)
 
         clear_terminal(Config)
-        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The queries/URLs are being processed. This can take a while...')
+        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The following queries/URLs are being processed. This may take some time...')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}Queries ({Color.cyan}{len(InputQueries._queries)}{Color.blue} item(s): {Color.cyan}{InputQueries._queries}')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}URLs ({Color.cyan}{len(InputQueries._urls)}{Color.blue} item(s)): {Color.cyan}{InputQueries._urls}')
 
         # Sort the URLs by their type
         InputQueries = sort_urls_by_type_and_domain(InputQueries)
 
-        # Download the media files
-        clear_terminal(Config)
+        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}The queries/URLs have been successfully processed and sorted by type and domain, below you will see a summary of the process carried out.')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}1. {Color.cyan}{InputQueries.SortedURLs.youtube.fancy_name} {Color.light_blue}[Final Single] {Color.blue}({Color.cyan}{len(InputQueries.SortedURLs.youtube.single_urls)} URL(s){Color.blue}): {Color.cyan}{InputQueries.SortedURLs.youtube.single_urls}')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}1.1 {Color.cyan}{InputQueries.SortedURLs.youtube.fancy_name} {Color.blue}[Single] ({Color.cyan}{len(InputQueries.SortedURLs.youtube.mixed_urls['single'])} URL(s){Color.blue}): {Color.cyan}{InputQueries.SortedURLs.youtube.mixed_urls['single']}')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}1.2 {Color.cyan}{InputQueries.SortedURLs.youtube.fancy_name} {Color.blue}[Playlist] ({Color.cyan}{len(InputQueries.SortedURLs.youtube.mixed_urls['playlist'])} URL(s){Color.blue}): {Color.cyan}{InputQueries.SortedURLs.youtube.mixed_urls['playlist']}')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}2. {Color.cyan}{InputQueries.SortedURLs.youtube_music.fancy_name} {Color.light_blue}[Final Single] {Color.blue}({Color.cyan}{len(InputQueries.SortedURLs.youtube_music.single_urls)} URL(s){Color.blue}): {Color.cyan}{InputQueries.SortedURLs.youtube_music.single_urls}')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}2.1 {Color.cyan}{InputQueries.SortedURLs.youtube_music.fancy_name} {Color.blue}[Single] ({Color.cyan}{len(InputQueries.SortedURLs.youtube_music.mixed_urls['single'])} URL(s){Color.blue}): {Color.cyan}{InputQueries.SortedURLs.youtube_music.mixed_urls['single']}')
+        print(f'{Bracket('info', Color.blue)} {Color.blue}2.2 {Color.cyan}{InputQueries.SortedURLs.youtube_music.fancy_name} {Color.blue}[Playlist] ({Color.cyan}{len(InputQueries.SortedURLs.youtube_music.mixed_urls['playlist'])} URL(s){Color.blue}): {Color.cyan}{InputQueries.SortedURLs.youtube_music.mixed_urls['playlist']}')
+
+        print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Starting the download process...')
 
         # Initialize the Snapper object
         snapper = Snapper(enable_ytdlp_log=False)
 
-        for url in InputQueries.SortedURLs.youtube.single_urls:
+        for url in InputQueries.SortedURLs.youtube.single_urls + InputQueries.SortedURLs.youtube_music.single_urls:
+            print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Extracting information from the URL {Color.cyan}{url}{Color.blue}...')
             try:
                 snapper.run(url)
             except Exception as e:
                 print(f'{Bracket('error', Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
+                continue
 
             snapper.analyze_media_info()
             snapper.analyze_audio_streams(preferred_language='auto')
@@ -180,15 +195,17 @@ def main() -> None:
 
             cover_image_path = Path(Config.temporary_path, f'.tmp_{media_info['id']}_cover.jpg').resolve()
             audio_path = Path(Config.default_downloaded_musics_path, f'{media_info['cleanTitle']}.{stream_info['extension']}').resolve()
-            print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
-            download_file(url=media_info['thumbnails'][0], output_path=cover_image_path, max_connections=2)
-            download_file(url=stream_info['url'], output_path=audio_path, max_connections=8)
+
+            print(f'{Bracket('info', Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
+            download_file(url=media_info['thumbnails'][0], output_path=cover_image_path, max_connections=1)
+            download_file(url=stream_info['url'], output_path=audio_path, max_connections=6)
 
             print(f'{Bracket('info', Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
             transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, cover_image=cover_image_path)
+            print(f'{Bracket('success', Color.green)} {Color.green}The audio file has been downloaded and processed successfully to {Color.light_green}{audio_path.with_suffix('.opus').as_posix()}')
 
         # Exit the application or continue
-        exit_input = input(f'{Bracket('info', Color.green, 1)} {Color.green}All media files have been downloaded successfully! Press ENTER to exit...') # Press ENTER to continue or type anything to exit:
+        exit_input = input(f'{Bracket('info', Color.light_green, 1)} {Color.light_green}All media files have been downloaded successfully! Press ENTER to exit...') # Press ENTER to continue or type anything to exit:
         exit(0)
 
         #if exit_input:
@@ -201,6 +218,6 @@ if __name__ == '__main__':
     clear_terminal(Config)
     main()
 
-# Foster the People - Don't Stop (The Fat Rat Remix)
+# Alok, Bruno Martini feat. Zeeba - Hear Me Now (Official Music Video)
 # https://www.youtube.com/watch?v=4N1iwQxiHrs
 # https://www.youtube.com/playlist?list=PLRBp0Fe2GpgnymQGm0yIxcdzkQsPKwnBD
