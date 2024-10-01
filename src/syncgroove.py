@@ -212,10 +212,10 @@ def main() -> None:
         transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, cover_image=cover_image_path)
         print(f'{Bracket('success', Color.green)} {Color.green}The audio file has been downloaded and processed successfully to {Color.light_green}{audio_path.with_suffix('.opus').as_posix()}')
 
-        # Exit the application
-        total_downloaded_musics = len(InputQueries.SortedURLs.youtube.single_urls) + len(InputQueries.SortedURLs.youtube_music.single_urls)
-        input(f'{Bracket('info', Color.light_green, 1)} {Color.light_green}The download process has been completed successfully, {Color.green}{total_downloaded_musics} music(s) {Color.light_green}have been downloaded and processed, press any key to exit...')
-        exit(0)
+    # Exit the application
+    total_downloaded_musics = len(InputQueries.SortedURLs.youtube.single_urls) + len(InputQueries.SortedURLs.youtube_music.single_urls)
+    input(f'{Bracket('info', Color.light_green, 1)} {Color.light_green}The download process has been completed successfully, {Color.green}{total_downloaded_musics} music(s) {Color.light_green}have been downloaded and processed, press any key to exit...')
+    exit(0)
 
 
 if __name__ == '__main__':
