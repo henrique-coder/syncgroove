@@ -11,7 +11,7 @@ class Config:
     os_name: str = system_name().lower() or '?'
     is_windows: bool = bool(os_name == 'windows')
     is_linux: bool = bool(os_name == 'linux')
-    version: str = '0.0.1'
+    version: str = '0.0.2'
     name: str = 'syncgroove'
     fancy_name: str = 'SyncGroove'
     temporary_path: str = Path((gettempdir() or 'tmp'), f'{name}-{version}').resolve().as_posix()
