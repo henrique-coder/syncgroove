@@ -1,7 +1,9 @@
 colorama
 httpx
+music-tag
 pillow
 platformdirs
+pydub
 pyffmpeg
 pysmartdl2
 streamsnapper
