@@ -3,10 +3,10 @@ from re import match as re_match
 from typing import Callable, Dict, List
 
 # Third-party imports
-from streamsnapper import Extractor, StreamBaseError
+from streamsnapper import YouTube
 
 
-extractor = Extractor()
+youtube_extractor = YouTube.Extractor()
 
 
 class URLClassifier:
@@ -38,7 +38,7 @@ youtube_classifier = URLClassifier(
         'single': r'(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+(&[^\s]*)?$',
         'playlist': r'(https?://)?(www\.)?youtube\.com/(watch\?v=[\w-]+&list=|playlist\?list=)[\w-]+'
     },
-    extract_playlist_func=extractor.extract_playlist_videos
+    extract_playlist_func=youtube_extractor.get_playlist_videos
 )
 
 youtube_music_classifier = URLClassifier(
@@ -46,7 +46,7 @@ youtube_music_classifier = URLClassifier(
         'single': r'(https?://)?(www\.)?music\.youtube\.com/watch\?v=[\w-]+(&[^\s]*)?$',
         'playlist': r'(https?://)?(www\.)?music\.youtube\.com/playlist\?list=[\w-]+'
     },
-    extract_playlist_func=extractor.extract_playlist_videos
+    extract_playlist_func=youtube_extractor.get_playlist_videos
 )
 
 
@@ -65,11 +65,11 @@ def sort_urls_by_type_and_domain(input_queries_obj: type) -> type:
 
     # Classify the queries (at the moment, searching for songs by name is only supported by YouTube)
     for query in input_queries_obj._queries:
-        youtube_media_url = extractor.search_video(query)
+        youtube_media_url = youtube_extractor.search(query)
 
         if youtube_media_url:
             for classifier in classifiers:
-                classifier.classify(youtube_media_url)
+                classifier.classify(youtube_media_url[0])
 
     # Update the object with the sorted URLs
     input_queries_obj.SortedURLs.youtube = youtube_classifier

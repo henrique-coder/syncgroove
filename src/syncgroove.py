@@ -6,7 +6,7 @@ from typing import List
 from sys import exit
 
 # Third-party imports
-from streamsnapper import Snapper, StreamBaseError
+from streamsnapper import YouTube
 
 # Local imports
 from utils.config import Config
@@ -185,31 +185,31 @@ def main() -> None:
     print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Starting the download process...')
 
     # Initialize the Snapper object
-    snapper = Snapper(enable_ytdlp_log=False)
+    youtube = YouTube(enable_ytdlp_log=False)
 
     for url in InputQueries.SortedURLs.youtube.single_urls + InputQueries.SortedURLs.youtube_music.single_urls:
         print(f'{Bracket('info', Color.blue, 1)} {Color.blue}Extracting information from the URL {Color.cyan}{url}{Color.blue}...')
         try:
-            snapper.run(url)
+            youtube.run(url)
         except Exception as e:
             print(f'{Bracket('error', Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
             continue
 
-        snapper.analyze_media_info()
-        snapper.analyze_audio_streams(preferred_language='auto')
+        youtube.analyze_info()
+        youtube.analyze_audio_streams(preferred_language='auto')
 
-        media_info = snapper.media_info
-        stream_info = snapper.best_audio_stream
+        general_info = youtube.general_info
+        stream_info = youtube.best_audio_stream
 
-        cover_image_path = Path(Config.temporary_path, f'.tmp_{media_info['id']}_cover.jpg').resolve()
-        audio_path = Path(Config.default_downloaded_musics_path, f'{media_info['cleanTitle']}.{stream_info['extension']}').resolve()
+        cover_image_path = Path(Config.temporary_path, f'.tmp_{general_info['id']}_cover.jpg').resolve()
+        audio_path = Path(Config.default_downloaded_musics_path, f'{general_info['cleanTitle']}.{stream_info['extension']}').resolve()
 
-        print(f'{Bracket('info', Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{media_info['title']}{Color.blue} by {Color.cyan}{media_info['channelName']}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
-        download_file(url=media_info['thumbnails'][0], output_path=cover_image_path, max_connections=1)
+        print(f'{Bracket('info', Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info['size']} bytes {Color.blue}from {Color.cyan}{general_info['title']}{Color.blue} by {Color.cyan}{general_info['channelName']}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
+        download_file(url=general_info['thumbnails'][0], output_path=cover_image_path, max_connections=1)
         download_file(url=stream_info['url'], output_path=audio_path, max_connections=6)
 
         print(f'{Bracket('info', Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
-        transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=media_info['title'], artist=media_info['channelName'], year=datetime.fromtimestamp(media_info['uploadTimestamp']).year, cover_image=cover_image_path)
+        transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=general_info['title'], artist=general_info['channelName'], year=datetime.fromtimestamp(general_info['uploadTimestamp']).year, cover_image=cover_image_path)
         print(f'{Bracket('success', Color.green)} {Color.green}The audio file has been downloaded and processed successfully to {Color.light_green}{audio_path.with_suffix('.opus').as_posix()}')
 
     # Exit the application
@@ -222,6 +222,7 @@ if __name__ == '__main__':
     clear_terminal(Config)
     main()
 
+# --> Debugging queries
 # Alok, Bruno Martini feat. Zeeba - Hear Me Now (Official Music Video)
 # https://www.youtube.com/watch?v=4N1iwQxiHrs
 # https://www.youtube.com/playlist?list=PLRBp0Fe2GpgnymQGm0yIxcdzkQsPKwnBD
