@@ -1,10 +1,9 @@
 colorama
-httpx
+requests
 music-tag
 pillow
 platformdirs
 pydub
 pyffmpeg
-pysmartdl2
-streamsnapper
+streamsnapper[youtube,downloader]
 validators
