@@ -8,7 +8,7 @@ from typing import List, Tuple, Optional, Union
 
 # Third-party imports
 from colorama import init as colorama_init, Fore as ColoramaFore
-from httpx import get, head, HTTPError
+from requests import get, head, HTTPError
 from validators import url as is_url, ValidationError
 from PIL import Image
 from pyffmpeg import FFmpeg
@@ -112,7 +112,7 @@ def is_valid_url(url: str, online_check: bool = False) -> Optional[bool]:
 
     if online_check:
         try:
-            response = head(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}, follow_redirects=True, timeout=10)
+            response = head(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36'}, allow_redirects=True, timeout=10)
             return True if response.is_success or response.is_redirect else None
         except HTTPError:
             return None
@@ -197,9 +197,9 @@ def get_latest_app_version() -> Optional[str]:
     url = 'https://raw.githubusercontent.com/henrique-coder/syncgroove/refs/heads/main/version'
 
     try:
-        response = get(url, follow_redirects=False, timeout=10)
+        response = get(url, allow_redirects=False, timeout=10)
 
-        if response.is_success:
+        if response.ok:
             return response.text.strip()
     except HTTPError:
         return None
@@ -233,9 +233,9 @@ def download_app_icon(path: Union[str, PathLike]) -> None:
     icon_url = 'https://raw.githubusercontent.com/henrique-coder/syncgroove/refs/heads/main/icon.ico'
 
     try:
-        response = get(icon_url, follow_redirects=False, timeout=30)
+        response = get(icon_url, allow_redirects=False, timeout=30)
 
-        if response.is_success:
+        if response.ok:
             Path(path).write_bytes(response.content)
         else:
             raise Exception('Failed to download the app icon.')
