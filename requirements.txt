@@ -1,9 +1,9 @@
 colorama
-requests
 music-tag
 pillow
 platformdirs
 pydub
 pyffmpeg
-streamsnapper[youtube,downloader]
+requests
+streamsnapper[youtube,downloader] == 0.1.1
 validators
