@@ -185,18 +185,18 @@ def main() -> None:
     print(f'{Bracket("info", Color.blue, 1)} {Color.blue}Starting the download process...')
 
     # Initialize the Snapper object
-    youtube = YouTube(enable_ytdlp_log=False)
+    youtube = YouTube(logging=False)
 
     for url in InputQueries.SortedURLs.youtube.single_urls + InputQueries.SortedURLs.youtube_music.single_urls:
         print(f'{Bracket("info", Color.blue, 1)} {Color.blue}Extracting information from the URL {Color.cyan}{url}{Color.blue}...')
         try:
-            youtube.run(url=url)
+            youtube.extract(url=url)
         except Exception as e:
             print(f'{Bracket("error", Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
             continue
 
         youtube.analyze_info(check_thumbnails=True)
-        youtube.analyze_audio_streams(preferred_language='auto')
+        youtube.analyze_audio_streams(preferred_language='local')
 
         general_info = youtube.general_info
         stream_info = youtube.best_audio_stream
@@ -206,7 +206,7 @@ def main() -> None:
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info["size"]} bytes {Color.blue}from {Color.cyan}{general_info["title"]}{Color.blue} by {Color.cyan}{general_info["channelName"]}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
         Downloader(max_connections=1).download(url=general_info['thumbnails'][0], output_file_path=cover_image_path)
-        Downloader(max_connections=6).download(url=stream_info['url'], output_file_path=audio_path)
+        Downloader(max_connections=8).download(url=stream_info['url'], output_file_path=audio_path)
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
         transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=general_info['title'], artist=general_info['channelName'], year=datetime.fromtimestamp(general_info['uploadTimestamp']).year, cover_image=cover_image_path)

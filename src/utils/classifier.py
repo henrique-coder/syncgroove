@@ -3,10 +3,10 @@ from re import match as re_match
 from typing import Callable, Dict, List
 
 # Third-party imports
-from streamsnapper import YouTube
+from streamsnapper import YouTubeExtractor
 
 
-youtube_extractor = YouTube.Extractor()
+youtube_extractor = YouTubeExtractor()
 
 
 class URLClassifier:
@@ -35,7 +35,7 @@ class URLClassifier:
 
 youtube_classifier = URLClassifier(
     'youtube', 'YouTube', {
-        'single': r'(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/)[\w-]+(&[^\s]*)?$',
+        'single': r'(https?://)?(www\.)?(youtube\.com/(watch\?v=|shorts/)|youtu\.be/)[\w-]+(\?[^\s]*)?$',
         'playlist': r'(https?://)?(www\.)?youtube\.com/(watch\?v=[\w-]+&list=|playlist\?list=)[\w-]+'
     },
     extract_playlist_func=youtube_extractor.get_playlist_videos
