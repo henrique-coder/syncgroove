@@ -5,5 +5,5 @@ platformdirs
 pydub
 pyffmpeg
 requests
-streamsnapper[youtube,downloader]
+streamsnapper[youtube,downloader] == 0.2.2
 validators
