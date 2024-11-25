@@ -205,8 +205,8 @@ def main() -> None:
         audio_path = Path(Config.default_downloaded_musics_path, f'{general_info["cleanTitle"]} [{general_info["id"]}].{stream_info["extension"]}').resolve()
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info["size"]} bytes {Color.blue}from {Color.cyan}{general_info["title"]}{Color.blue} by {Color.cyan}{general_info["channelName"]}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
-        Downloader(max_connections=1).download(url=general_info['thumbnails'][0], output_file_path=cover_image_path)
-        Downloader(max_connections=8).download(url=stream_info['url'], output_file_path=audio_path)
+        Downloader(max_connections='auto').download(url=general_info['thumbnails'][0], output_file_path=cover_image_path)
+        Downloader(max_connections='auto').download(url=stream_info['url'], output_file_path=audio_path)
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
         transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=general_info['title'], artist=general_info['channelName'], year=datetime.fromtimestamp(general_info['uploadTimestamp']).year, cover_image=cover_image_path)
