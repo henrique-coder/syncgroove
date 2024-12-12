@@ -1,9 +1,9 @@
-colorama
-music-tag
-pillow
-platformdirs
-pydub
-pyffmpeg
-requests
-streamsnapper[youtube,downloader] == 0.2.2
-validators
+colorama == 0.4.6
+music-tag == 0.4.3
+pillow == 11.0.0
+platformdirs == 4.3.6
+pydub == 0.25.1
+pyffmpeg == 2.4.2.18.1
+requests == 2.32.3
+streamsnapper[youtube,downloader] == 0.2.4
+validators == 0.34.0
