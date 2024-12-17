@@ -103,6 +103,42 @@ def main() -> None:
     download_latest_ffmpeg(Config)
     clear_terminal(Config)
 
+    # Ask the user for their internet connection speed
+    connection_speed_path = Path(Config.main_resources_path, 'connection_speed.txt')
+    cached_connection_speed = 'auto'
+
+    if connection_speed_path.exists():
+        cached_connection_speed = connection_speed_path.read_text()
+
+        if not cached_connection_speed or 'auto' in cached_connection_speed.lower():
+            cached_connection_speed = 'auto'
+        else:
+            try:
+                cached_connection_speed = float(cached_connection_speed)
+            except ValueError:
+                cached_connection_speed = 'auto'
+                connection_speed_path.write_text(cached_connection_speed)
+
+    while True:
+        connection_speed = input(f'{Bracket("info", Color.blue, 1)} {Color.blue}What is your internet connection speed in Mbps (Press ENTER to use the cached value: "{cached_connection_speed}"): ')
+
+        if not connection_speed:
+            connection_speed = cached_connection_speed
+            break
+        elif 'auto' in connection_speed.lower():
+            connection_speed = 'auto'
+            connection_speed_path.write_text(connection_speed)
+            break
+        else:
+            try:
+                connection_speed = float(connection_speed)
+                connection_speed_path.write_text(str(connection_speed))
+                break
+            except ValueError:
+                print(f'{Bracket("warning", Color.yellow, 1)} {Color.yellow}Invalid input, please enter a valid number or "auto"')
+
+    clear_terminal(Config)
+
     # Initialize the InputQueries object
     InputQueries = InputQueriesTemplate()
 
@@ -205,8 +241,9 @@ def main() -> None:
         audio_path = Path(Config.default_downloaded_musics_path, f'{general_info["cleanTitle"]} [{general_info["id"]}].{stream_info["extension"]}').resolve()
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info["size"]} bytes {Color.blue}from {Color.cyan}{general_info["title"]}{Color.blue} by {Color.cyan}{general_info["channelName"]}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
-        Downloader(max_connections='auto').download(url=general_info['thumbnails'][0], output_path=cover_image_path)
-        Downloader(max_connections='auto').download(url=stream_info['url'], output_path=audio_path)
+        downloader = Downloader(max_connections='auto', connection_speed=connection_speed, overwrite=True, show_progress_bar=True)
+        downloader.download(url=general_info['thumbnails'][0], output_path=cover_image_path)
+        downloader.download(url=stream_info['url'], output_path=audio_path)
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
         transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=general_info['title'], artist=general_info['channelName'], year=datetime.fromtimestamp(general_info['uploadTimestamp']).year, cover_image=cover_image_path)
