@@ -6,7 +6,8 @@ from typing import List
 from sys import exit
 
 # Third-party imports
-from streamsnapper import YouTube, Downloader
+from streamsnapper import YouTube
+from turbodl import TurboDL
 
 # Local imports
 from utils.config import Config
@@ -241,7 +242,7 @@ def main() -> None:
         audio_path = Path(Config.default_downloaded_musics_path, f'{general_info["cleanTitle"]} [{general_info["id"]}].{stream_info["extension"]}').resolve()
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info["size"]} bytes {Color.blue}from {Color.cyan}{general_info["title"]}{Color.blue} by {Color.cyan}{general_info["channelName"]}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
-        downloader = Downloader(max_connections='auto', connection_speed=connection_speed, overwrite=True, show_progress_bar=True)
+        downloader = TurboDL(max_connections='auto', connection_speed=connection_speed, overwrite=True, show_progress_bar=True)
         downloader.download(url=general_info['thumbnails'][0], output_path=cover_image_path)
         downloader.download(url=stream_info['url'], output_path=audio_path)
 
