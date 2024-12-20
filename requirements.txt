@@ -6,5 +6,5 @@ pydub == 0.25.1
 pyffmpeg == 2.4.2.18.1
 requests == 2.32.3
 streamsnapper[youtube] == 0.2.6
-turbodl == 0.0.1
+turbodl
 validators == 0.34.0
