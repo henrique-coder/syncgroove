@@ -232,22 +232,22 @@ def main() -> None:
             print(f'{Bracket("error", Color.red, 1)} {Color.red}An error occurred while processing the URL {Color.cyan}{url}{Color.red}: {e}')
             continue
 
-        youtube.analyze_info(check_thumbnails=True, retrieve_dislike_count=False)
+        youtube.analyze_information(check_thumbnails=True, retrieve_dislike_count=False)
         youtube.analyze_audio_streams(preferred_language='local')
 
-        general_info = youtube.general_info
+        information = youtube.information
         stream_info = youtube.best_audio_stream
 
-        cover_image_path = Path(Config.temporary_path, f'.tmp_{general_info["id"]}_cover.jpg').resolve()
-        audio_path = Path(Config.default_downloaded_musics_path, f'{general_info["cleanTitle"]} [{general_info["id"]}].{stream_info["extension"]}').resolve()
+        cover_image_path = Path(Config.temporary_path, f'.tmp_{information.id}_cover.jpg').resolve()
+        audio_path = Path(Config.default_downloaded_musics_path, f'{information.cleanTitle} [{information.id}].{stream_info["extension"]}').resolve()
 
-        print(f'{Bracket("info", Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info["size"]} bytes {Color.blue}from {Color.cyan}{general_info["title"]}{Color.blue} by {Color.cyan}{general_info["channelName"]}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
+        print(f'{Bracket("info", Color.blue)} {Color.blue}Downloading {Color.cyan}{stream_info["size"]} bytes {Color.blue}from {Color.cyan}{information.title}{Color.blue} by {Color.cyan}{information.channelName}{Color.blue} to {Color.cyan}{audio_path.as_posix()}')
         turbodl = TurboDL(max_connections='auto', connection_speed=connection_speed, overwrite=True, show_progress_bars=True)
-        turbodl.download(url=general_info['thumbnails'][0], output_path=cover_image_path)
+        turbodl.download(url=information.thumbnails[0], output_path=cover_image_path)
         turbodl.download(url=stream_info['url'], output_path=audio_path)
 
         print(f'{Bracket("info", Color.blue)} {Color.blue}Transcoding audio to {Color.cyan}OPUS {Color.blue}codec and adding metadata...')
-        transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=general_info['title'], artist=general_info['channelName'], year=datetime.fromtimestamp(general_info['uploadTimestamp']).year, cover_image=cover_image_path)
+        transcode_and_edit_metadata(path=audio_path, output_path=audio_path.with_suffix('.opus'), bitrate=int(stream_info['bitrate']), title=information.title, artist=information.channelName, year=datetime.fromtimestamp(information.uploadTimestamp).year, cover_image=cover_image_path)
         print(f'{Bracket("success", Color.green)} {Color.green}The audio file has been downloaded and processed successfully to {Color.light_green}{audio_path.with_suffix(".opus").as_posix()}')
 
     # Exit the application

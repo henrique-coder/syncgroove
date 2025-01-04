@@ -3,8 +3,8 @@ music-tag == 0.4.3
 pillow == 11.1.0
 platformdirs == 4.3.6
 pydub == 0.25.1
-pyffmpeg == 2.4.2.18.1
+pyffmpeg == 2.4.2.20
 requests == 2.32.3
-streamsnapper[youtube]
-turbodl
+streamsnapper == 0.2.8
+turbodl == 0.1.5
 validators == 0.34.0
